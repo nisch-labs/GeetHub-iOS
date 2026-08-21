@@ -1,0 +1,38 @@
+name: GeetHub
+options:
+  bundleIdPrefix: com.nixsocket
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+packages:
+  GeetHubKit:
+    path: GeetHubKit
+
+targets:
+  GeetHub:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: GeetHubKit
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Geet-Hub
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        # Self-hosted servers may be plain http (Tailscale/LAN); allow it.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nixsocket.geethub
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        # Simulator runs don't need signing.
+        CODE_SIGNING_ALLOWED: "NO"

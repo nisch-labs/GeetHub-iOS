@@ -18,3 +18,7 @@ Package.resolved
 # Secrets / local config (never commit server creds)
 *.local
 Secrets.plist
+
+# XcodeGen build output already ignored above; keep project.yml as source of truth
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
