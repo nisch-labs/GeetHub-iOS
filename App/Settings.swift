@@ -6,7 +6,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: 10) {
                     Text("Settings").retro(20, .bold, tracking: 1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 4)
@@ -52,18 +52,18 @@ struct SettingsView: View {
     private func card<D: View>(_ icon: String, _ title: String, _ subtitle: String,
                                @ViewBuilder destination: @escaping () -> D) -> some View {
         NavigationLink(destination: destination) {
-            HStack(spacing: 14) {
-                Image(systemName: icon).font(.title3).foregroundStyle(Theme.accent).frame(width: 30)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title).retro(15, .semibold)
-                    Text(subtitle).retro(9, .light, color: Theme.graphite, tracking: 0.5).lineLimit(1)
+            HStack(spacing: 12) {
+                Image(systemName: icon).font(.system(size: 15)).foregroundStyle(Theme.accent).frame(width: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).retro(13, .semibold)
+                    Text(subtitle).retro(8, .light, color: Theme.graphite, tracking: 0.5).lineLimit(1)
                 }
                 Spacer(minLength: 8)
-                Image(systemName: "chevron.right").font(.footnote).foregroundStyle(Theme.graphite)
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(Theme.graphite)
             }
-            .padding(16)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 20)
