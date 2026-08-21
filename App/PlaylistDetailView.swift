@@ -5,6 +5,7 @@ import GeetHubKit
 struct PlaylistDetailView: View {
     @Environment(Session.self) private var session
     @Environment(PlayerEngine.self) private var player
+    @Environment(PlaylistFavorites.self) private var playlistFavs
     let playlist: Playlist
 
     @State private var songs: [Song] = []
@@ -34,7 +35,15 @@ struct PlaylistDetailView: View {
         }
         .paperBackground()
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .principal) { Text(playlist.name).retro(12, .medium, tracking: 2).lineLimit(1) } }
+        .toolbar {
+            ToolbarItem(placement: .principal) { Text(playlist.name).retro(12, .medium, tracking: 2).lineLimit(1) }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { playlistFavs.toggle(playlist.id) } label: {
+                    Image(systemName: playlistFavs.isFavorite(playlist.id) ? "heart.fill" : "heart")
+                        .foregroundStyle(playlistFavs.isFavorite(playlist.id) ? Theme.accent : Theme.ink)
+                }
+            }
+        }
         .overlay { if isLoading { ProgressView() } }
         .task {
             songs = (try? await session.client?.playlist(id: playlist.id))?.entry ?? []

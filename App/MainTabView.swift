@@ -7,6 +7,7 @@ struct MainTabView: View {
     @Environment(ThemeManager.self) private var theme
     @State private var player: PlayerEngine?
     @State private var picker = PlaylistPicker()
+    @State private var playlistFavs = PlaylistFavorites()
     @State private var showPlayer = false
     @State private var selectedTab = 0
 
@@ -39,6 +40,7 @@ struct MainTabView: View {
                 }
                 .environment(player)
                 .environment(picker)
+                .environment(playlistFavs)
                 .tint(theme.accent)
                 .fullScreenCover(isPresented: $showPlayer) {
                     FullPlayerView().environment(player).environment(picker)

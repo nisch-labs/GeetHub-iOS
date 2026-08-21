@@ -12,6 +12,7 @@ enum SongSort: String, CaseIterable {
 
 struct LibraryView: View {
     @Environment(Session.self) private var session
+    @Environment(PlaylistFavorites.self) private var playlistFavs
     @State private var tab = 0   // default: Songs
     @State private var songSort: SongSort = .title
 
@@ -103,22 +104,30 @@ struct LibraryView: View {
     private var playlistList: some View {
         LazyVStack(spacing: 0) {
             ForEach(playlists) { playlist in
-                NavigationLink(value: playlist) {
-                    HStack(spacing: 14) {
-                        RoundedRectangle(cornerRadius: 0).fill(Theme.surface).frame(width: 44, height: 44)
-                            .overlay(Rectangle().strokeBorder(Theme.hairline, lineWidth: 1))
-                            .overlay(Image(systemName: "music.note.list").foregroundStyle(Theme.graphite))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(playlist.name).retro(15, .medium).lineLimit(1)
-                            if let n = playlist.songCount {
-                                Text("\(n) songs").retro(9, .light, color: Theme.graphite, tracking: 1)
+                HStack(spacing: 0) {
+                    NavigationLink(value: playlist) {
+                        HStack(spacing: 14) {
+                            RoundedRectangle(cornerRadius: 0).fill(Theme.surface).frame(width: 44, height: 44)
+                                .overlay(Rectangle().strokeBorder(Theme.hairline, lineWidth: 1))
+                                .overlay(Image(systemName: "music.note.list").foregroundStyle(Theme.graphite))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(playlist.name).retro(15, .medium).lineLimit(1)
+                                if let n = playlist.songCount {
+                                    Text("\(n) songs").retro(9, .light, color: Theme.graphite, tracking: 1)
+                                }
                             }
+                            Spacer(minLength: 4)
                         }
-                        Spacer()
+                        .padding(.leading, 20).padding(.vertical, 11).contentShape(Rectangle())
                     }
-                    .padding(.horizontal, 20).padding(.vertical, 11).contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    Button { playlistFavs.toggle(playlist.id) } label: {
+                        Image(systemName: playlistFavs.isFavorite(playlist.id) ? "heart.fill" : "heart")
+                            .foregroundStyle(playlistFavs.isFavorite(playlist.id) ? Theme.accent : Theme.graphite)
+                            .frame(width: 44, height: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain).padding(.trailing, 12)
                 }
-                .buttonStyle(.plain)
                 Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 78)
             }
         }

@@ -6,13 +6,17 @@ import GeetHubKit
 struct HomeView: View {
     @Environment(Session.self) private var session
     @Environment(PlayerEngine.self) private var player
+    @Environment(PlaylistFavorites.self) private var playlistFavs
     var onSelectTab: (Int) -> Void = { _ in }
 
     @State private var recentlyAdded: [Song] = []
     @State private var mostListened: [Song] = []
     @State private var favorites: [Song] = []
     @State private var albumsForRediscover: [Album] = []
+    @State private var allPlaylists: [Playlist] = []
     @State private var isLoading = true
+
+    private var favouritePlaylists: [Playlist] { allPlaylists.filter { playlistFavs.isFavorite($0.id) } }
 
     var body: some View {
         NavigationStack {
@@ -23,6 +27,7 @@ struct HomeView: View {
                     if !favorites.isEmpty { songShelf("Favourites", favorites, size: 150) }
                     if !player.recentlyPlayed.isEmpty { songShelf("Recently Played", player.recentlyPlayed, size: 92) }
                     if !recentlyAdded.isEmpty { songShelf("Recently Added", recentlyAdded, size: 92) }
+                    if !favouritePlaylists.isEmpty { playlistShelf }
                     if !mostListened.isEmpty { mostListenedSection }
                 }
                 .padding(.top, 12)
@@ -31,6 +36,7 @@ struct HomeView: View {
             .paperBackground()
             .navigationBarHidden(true)
             .navigationDestination(for: Album.self) { AlbumDetailView(album: $0) }
+            .navigationDestination(for: Playlist.self) { PlaylistDetailView(playlist: $0) }
             .refreshable { await load() }
             .overlay { if isLoading { ProgressView() } }
         }
@@ -118,6 +124,43 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Favourite Playlists (small cards)
+
+    private var playlistShelf: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Favourite Playlists")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(favouritePlaylists) { playlist in
+                        NavigationLink(value: playlist) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                playlistArt(playlist, size: 92)
+                                Text(playlist.name).retro(10, .semibold).lineLimit(1)
+                                    .frame(width: 92, alignment: .leading)
+                                Text("\(playlist.songCount ?? 0) songs")
+                                    .retro(8, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
+                                    .frame(width: 92, alignment: .leading)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    @ViewBuilder private func playlistArt(_ playlist: Playlist, size: CGFloat) -> some View {
+        if let art = playlist.coverArt {
+            ArtworkImage(coverArt: art, size: size, shape: .sleeve, corner: 10)
+        } else {
+            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.surface)
+                .frame(width: size, height: size)
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+                .overlay(Image(systemName: "music.note.list").font(.system(size: size * 0.3)).foregroundStyle(Theme.graphite))
+        }
+    }
+
     // MARK: - Most Listened (song list)
 
     private var mostListenedSection: some View {
@@ -134,12 +177,19 @@ struct HomeView: View {
         async let songsA = client.allSongs(size: 300)
         async let favA = client.favorites()
         async let albumsA = client.albumList(type: "newest", size: 20)
+        async let plA = client.playlists()
         let all = (try? await songsA) ?? []
         recentlyAdded = all.sorted { ($0.created ?? "") > ($1.created ?? "") }
         mostListened = all.filter { ($0.playCount ?? 0) > 0 }
             .sorted { ($0.playCount ?? 0) > ($1.playCount ?? 0) }
         favorites = (try? await favA)?.song ?? []
         albumsForRediscover = (try? await albumsA) ?? []
+        allPlaylists = (try? await plA) ?? []
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["GEETHUB_SEEDPLFAV"] == "1" {
+            for p in allPlaylists.prefix(4) where !playlistFavs.isFavorite(p.id) { playlistFavs.toggle(p.id) }
+        }
+        #endif
         isLoading = false
     }
 

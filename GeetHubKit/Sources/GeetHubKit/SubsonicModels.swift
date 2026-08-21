@@ -97,6 +97,7 @@ public struct Playlist: Decodable, Sendable, Identifiable, Hashable {
     public let duration: Int?
     public let owner: String?
     public let `public`: Bool?
+    public let coverArt: String?
 }
 
 // MARK: - Containers
