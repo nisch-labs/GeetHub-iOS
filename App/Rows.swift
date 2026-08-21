@@ -13,7 +13,7 @@ struct SongRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     if isPlaying {
-                        Image(systemName: "waveform").font(.caption2).foregroundStyle(Theme.teal)
+                        Image(systemName: "waveform").font(.caption2).foregroundStyle(Theme.accent)
                     }
                     Text(song.title).retro(15, .medium).lineLimit(1)
                 }
@@ -22,13 +22,13 @@ struct SongRow: View {
             }
             Spacer(minLength: 8)
             if favorited {
-                Image(systemName: "heart.fill").font(.caption2).foregroundStyle(Theme.teal)
+                Image(systemName: "heart.fill").font(.caption2).foregroundStyle(Theme.accent)
             }
             if song.isYouTube {
                 Text("YouTube")
-                    .retro(9, .semibold, color: Theme.teal, tracking: 1.5)
+                    .retro(9, .semibold, color: Theme.accent, tracking: 1.5)
                     .padding(.horizontal, 7).padding(.vertical, 3)
-                    .overlay(Capsule().strokeBorder(Theme.teal.opacity(0.4), lineWidth: 1))
+                    .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.4), lineWidth: 1))
             } else if let d = song.duration {
                 Text(Self.time(d))
                     .font(.system(.caption, design: .monospaced))

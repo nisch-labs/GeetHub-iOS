@@ -16,7 +16,7 @@ struct LoginView: View {
 
             Image(systemName: "opticaldisc")
                 .font(.system(size: 64))
-                .foregroundStyle(Theme.teal)
+                .foregroundStyle(Theme.accent)
             VStack(spacing: 4) {
                 Text("Geet-Hub").retro(40, .bold, tracking: 2)
                 Text("Your records, anywhere")
@@ -35,7 +35,7 @@ struct LoginView: View {
             .overlay(Rectangle().strokeBorder(Theme.hairline, lineWidth: 1))
 
             if case .failed(let message) = session.state {
-                Text(message).retro(11, .regular, color: Theme.teal, tracking: 1)
+                Text(message).retro(11, .regular, color: Theme.accent, tracking: 1)
                     .multilineTextAlignment(.center)
             }
 
@@ -45,7 +45,7 @@ struct LoginView: View {
                     else { Text("Log in").retro(15, .semibold, color: .white, tracking: 3) }
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, 15)
-                .background(canSubmit ? Theme.teal : Theme.graphite)
+                .background(canSubmit ? Theme.accent : Theme.graphite)
             }
             .disabled(!canSubmit || isConnecting)
 

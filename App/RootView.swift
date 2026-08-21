@@ -6,6 +6,7 @@ import GeetHubKit
 /// library. Restores a saved server on launch.
 struct RootView: View {
     @Environment(Session.self) private var session
+    @Environment(ThemeManager.self) private var theme
 
     var body: some View {
         Group {
@@ -15,7 +16,7 @@ struct RootView: View {
                 LoginView()
             }
         }
-        .tint(Theme.teal)
+        .tint(theme.accent)
         .preferredColorScheme(.light)   // the vinyl look is intentionally paper-light
         .task { await start() }
     }

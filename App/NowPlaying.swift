@@ -20,7 +20,7 @@ struct NowPlayingBar: View {
                     Spacer(minLength: 8)
                     Button { player.togglePlayPause() } label: {
                         Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.title3).foregroundStyle(Theme.teal)
+                            .font(.title3).foregroundStyle(Theme.accent)
                     }.buttonStyle(.plain)
                     Button { player.next() } label: {
                         Image(systemName: "forward.end").font(.body).foregroundStyle(Theme.ink)
@@ -82,7 +82,7 @@ struct FullPlayerView: View {
             Button { player.toggleFavorite() } label: {
                 Image(systemName: player.isCurrentFavorite ? "heart.fill" : "heart")
                     .font(.headline)
-                    .foregroundStyle(player.isCurrentFavorite ? Theme.teal : Theme.ink)
+                    .foregroundStyle(player.isCurrentFavorite ? Theme.accent : Theme.ink)
             }
             Menu {
                 if let song = player.current {
@@ -112,10 +112,10 @@ struct FullPlayerView: View {
         return ZStack {
             // Progress arc + knob (static — represents elapsed time)
             Circle().trim(from: 0, to: progress)
-                .stroke(Theme.teal, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .stroke(Theme.accent, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .frame(width: ring, height: ring)
-            Circle().fill(Theme.teal)
+            Circle().fill(Theme.accent)
                 .frame(width: 16, height: 16)
                 .overlay(Circle().fill(Theme.surface).frame(width: 6, height: 6))
                 .offset(y: -ringRadius)
@@ -209,7 +209,7 @@ struct FullPlayerView: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 17))
-                .foregroundStyle(active ? Theme.teal : Theme.graphite)
+                .foregroundStyle(active ? Theme.accent : Theme.graphite)
                 .frame(width: 44, height: 36)
                 .contentShape(Rectangle())
         }
@@ -227,7 +227,7 @@ struct FullPlayerView: View {
             HStack(spacing: 0) {
                 transportButton("backward.end", tint: Theme.ink) { player.previous() }
                 divider
-                transportButton(player.isPlaying ? "pause" : "play", tint: Theme.teal) { player.togglePlayPause() }
+                transportButton(player.isPlaying ? "pause" : "play", tint: Theme.accent) { player.togglePlayPause() }
                 divider
                 transportButton("forward.end", tint: Theme.ink) { player.next() }
             }
@@ -254,7 +254,7 @@ struct CassetteButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(configuration.isPressed ? Theme.teal.opacity(0.12) : Color.clear)
+            .background(configuration.isPressed ? Theme.accent.opacity(0.12) : Color.clear)
             .contentShape(Rectangle())
     }
 }
@@ -273,8 +273,8 @@ struct Scrubber: View {
             let fraction = duration > 0 ? min(max(value / duration, 0), 1) : 0
             ZStack(alignment: .leading) {
                 Capsule().fill(Theme.hairline).frame(height: 3)
-                Capsule().fill(Theme.teal).frame(width: width * fraction, height: 3)
-                Circle().fill(Theme.teal).frame(width: 14, height: 14)
+                Capsule().fill(Theme.accent).frame(width: width * fraction, height: 3)
+                Circle().fill(Theme.accent).frame(width: 14, height: 14)
                     .offset(x: width * fraction - 7)
             }
             .frame(height: 20)

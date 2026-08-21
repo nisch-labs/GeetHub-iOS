@@ -7,8 +7,55 @@ enum Theme {
     static let surface  = Color.white
     static let ink      = Color(red: 0.078, green: 0.086, blue: 0.102) // #14161A
     static let graphite = Color(red: 0.541, green: 0.561, blue: 0.596) // #8A8F98
-    static let teal      = Color(red: 0.071, green: 0.475, blue: 0.561) // #12798F
     static let hairline = Color(red: 0.894, green: 0.894, blue: 0.878) // #E4E4E0
+
+    static let accentKey = "accentChoice"
+    /// The current accent — user-selectable in Settings, persisted.
+    static var accent: Color { AccentChoice.current.color }
+}
+
+/// Selectable accent colors.
+enum AccentChoice: String, CaseIterable, Identifiable {
+    case teal, indigo, crimson, amber, violet, forest, slate
+
+    var id: String { rawValue }
+    var label: String { rawValue.capitalized }
+
+    var color: Color {
+        switch self {
+        case .teal:    return Color(red: 0.071, green: 0.475, blue: 0.561)
+        case .indigo:  return Color(red: 0.263, green: 0.306, blue: 0.718)
+        case .crimson: return Color(red: 0.784, green: 0.157, blue: 0.290)
+        case .amber:   return Color(red: 0.831, green: 0.522, blue: 0.106)
+        case .violet:  return Color(red: 0.514, green: 0.278, blue: 0.663)
+        case .forest:  return Color(red: 0.129, green: 0.475, blue: 0.341)
+        case .slate:   return Color(red: 0.278, green: 0.333, blue: 0.404)
+        }
+    }
+
+    static var current: AccentChoice {
+        AccentChoice(rawValue: UserDefaults.standard.string(forKey: Theme.accentKey) ?? "") ?? .teal
+    }
+}
+
+/// Observable holder so accent changes re-tint the app live (music keeps playing).
+@MainActor
+@Observable
+final class ThemeManager {
+    var choice: AccentChoice {
+        didSet { UserDefaults.standard.set(choice.rawValue, forKey: Theme.accentKey) }
+    }
+    init() {
+        #if DEBUG
+        if let a = ProcessInfo.processInfo.environment["GEETHUB_ACCENT"], let c = AccentChoice(rawValue: a) {
+            UserDefaults.standard.set(a, forKey: Theme.accentKey)   // keep static Theme.accent in sync
+            choice = c
+            return
+        }
+        #endif
+        choice = AccentChoice.current
+    }
+    var accent: Color { choice.color }
 }
 
 extension Font {

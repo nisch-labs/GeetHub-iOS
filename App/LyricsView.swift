@@ -37,10 +37,10 @@ struct LyricsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) { Text("Lyrics").retro(13, .semibold, tracking: 2) }
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.tint(Theme.teal) }
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.tint(Theme.accent) }
             }
         }
-        .tint(Theme.teal)
+        .tint(Theme.accent)
         .task(id: player.current?.id) { await load() }
     }
 

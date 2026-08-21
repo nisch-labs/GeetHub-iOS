@@ -49,10 +49,10 @@ struct QueueView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) { Text("Queue").retro(13, .semibold, tracking: 2) }
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.tint(Theme.teal) }
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.tint(Theme.accent) }
             }
         }
-        .tint(Theme.teal)
+        .tint(Theme.accent)
     }
 
     private func header(_ title: String) -> some View {

@@ -6,11 +6,13 @@ import GeetHubKit
 @main
 struct GeetHubApp: App {
     @State private var session = Session()
+    @State private var theme = ThemeManager()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(session)
+                .environment(theme)
         }
     }
 }

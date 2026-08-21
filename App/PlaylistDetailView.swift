@@ -25,7 +25,7 @@ struct PlaylistDetailView: View {
                         Text("Play").retro(14, .semibold, color: .white, tracking: 2)
                     }
                     .foregroundStyle(.white).frame(maxWidth: .infinity).padding(.vertical, 14)
-                    .background(Theme.teal)
+                    .background(Theme.accent)
                 }
                 .disabled(songs.isEmpty).padding(.horizontal, 40)
 

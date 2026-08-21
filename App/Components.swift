@@ -63,7 +63,7 @@ struct Chip: View {
     var body: some View {
         Text(title).retro(12, .medium, color: filled ? .white : Theme.ink, tracking: 1.5)
             .padding(.horizontal, 16).padding(.vertical, 9)
-            .background(filled ? Theme.teal : Theme.surface, in: Capsule())
+            .background(filled ? Theme.accent : Theme.surface, in: Capsule())
             .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: filled ? 0 : 1))
     }
 }
@@ -107,7 +107,7 @@ struct SegmentedBar: View {
                         Text(title).retro(13, selection == index ? .semibold : .regular,
                                           color: selection == index ? Theme.ink : Theme.graphite, tracking: 1.5)
                         Rectangle()
-                            .fill(selection == index ? Theme.teal : .clear)
+                            .fill(selection == index ? Theme.accent : .clear)
                             .frame(height: 2)
                     }
                 }

@@ -30,12 +30,12 @@ struct AlbumDetailView: View {
                         }
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).padding(.vertical, 14)
-                        .background(Theme.teal)
+                        .background(Theme.accent)
                     }
                     Button { player.playShuffled(songs) } label: {
-                        Image(systemName: "shuffle").foregroundStyle(Theme.teal)
+                        Image(systemName: "shuffle").foregroundStyle(Theme.accent)
                             .frame(width: 52, height: 50)
-                            .overlay(Rectangle().strokeBorder(Theme.teal, lineWidth: 1.5))
+                            .overlay(Rectangle().strokeBorder(Theme.accent, lineWidth: 1.5))
                     }
                 }
                 .buttonStyle(.plain)

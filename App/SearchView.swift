@@ -47,17 +47,17 @@ struct SearchView: View {
             .overlay(alignment: .top) { if isSearching { ProgressView().padding(.top, 4) } }
             .overlay(alignment: .bottom) { toastView }
         }
-        .tint(Theme.teal)
+        .tint(Theme.accent)
         .searchable(text: $query, prompt: "Your library or YouTube")
         .onChange(of: query) { _, q in scheduleSearch(q) }
     }
 
     @ViewBuilder private func saveButton(for song: Song) -> some View {
         if saved.contains(song.id) {
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.teal)
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.accent)
         } else {
             Button { Task { await save(song) } } label: {
-                Image(systemName: "arrow.down.circle").font(.title3).foregroundStyle(Theme.teal)
+                Image(systemName: "arrow.down.circle").font(.title3).foregroundStyle(Theme.accent)
             }
             .buttonStyle(.plain)
         }

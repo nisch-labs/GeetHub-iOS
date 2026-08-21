@@ -37,7 +37,7 @@ struct AddToPlaylistSheet: View {
                             .overlay(Rectangle().strokeBorder(Theme.hairline, lineWidth: 1))
                         Button { Task { await createAndAdd() } } label: {
                             Image(systemName: "plus").foregroundStyle(.white)
-                                .frame(width: 44, height: 44).background(Theme.teal)
+                                .frame(width: 44, height: 44).background(Theme.accent)
                         }
                         .buttonStyle(.plain)
                         .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty || busy)
@@ -71,12 +71,12 @@ struct AddToPlaylistSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }.tint(Theme.teal)
+                    Button("Close") { dismiss() }.tint(Theme.accent)
                 }
             }
             .overlay { if busy { ProgressView() } }
         }
-        .tint(Theme.teal)
+        .tint(Theme.accent)
         .task { playlists = (try? await session.client?.playlists()) ?? [] }
     }
 

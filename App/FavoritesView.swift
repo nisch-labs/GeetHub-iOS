@@ -20,12 +20,12 @@ struct FavoritesView: View {
                         if !songs.isEmpty {
                             HStack(spacing: 18) {
                                 Button { player.playShuffled(songs) } label: {
-                                    Image(systemName: "shuffle").font(.footnote).foregroundStyle(Theme.teal)
+                                    Image(systemName: "shuffle").font(.footnote).foregroundStyle(Theme.accent)
                                 }
                                 Button { player.play(songs, startAt: 0) } label: {
                                     HStack(spacing: 6) {
                                         Image(systemName: "play.fill").font(.footnote)
-                                        Text("Play").retro(12, .semibold, color: Theme.teal, tracking: 1.5)
+                                        Text("Play").retro(12, .semibold, color: Theme.accent, tracking: 1.5)
                                     }
                                 }
                             }

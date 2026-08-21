@@ -44,7 +44,7 @@ struct HomeView: View {
         HStack(spacing: 12) {
             Circle().fill(Theme.surface).frame(width: 46, height: 46)
                 .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
-                .overlay(Image(systemName: "opticaldisc").foregroundStyle(Theme.teal))
+                .overlay(Image(systemName: "opticaldisc").foregroundStyle(Theme.accent))
             VStack(alignment: .leading, spacing: 2) {
                 Text(timeGreeting).retro(11, .light, color: Theme.graphite, tracking: 1.5)
                 Text(session.client?.credentials.username ?? "friend").retro(15, .semibold, tracking: 1)
@@ -211,7 +211,7 @@ private struct AlbumRow: View {
             .buttonStyle(.plain)
             Button(action: onPlay) {
                 Image(systemName: "play.fill").font(.system(size: 14)).foregroundStyle(.white)
-                    .frame(width: 38, height: 38).background(Theme.teal, in: Circle())
+                    .frame(width: 38, height: 38).background(Theme.accent, in: Circle())
             }
             .buttonStyle(.plain)
         }
@@ -229,7 +229,7 @@ private struct FeaturedCard: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 0) {
                 Image(systemName: icon).font(.title3)
-                    .foregroundStyle(filled ? .white : Theme.teal)
+                    .foregroundStyle(filled ? .white : Theme.accent)
                 Spacer(minLength: 12)
                 Text(title).retro(24, .bold, color: filled ? .white : Theme.ink, tracking: 0.5)
                 Text(subtitle)
@@ -238,16 +238,16 @@ private struct FeaturedCard: View {
                 Spacer(minLength: 12)
                 HStack(spacing: 10) {
                     Image(systemName: "play.fill").font(.system(size: 13))
-                        .foregroundStyle(filled ? Theme.teal : .white)
+                        .foregroundStyle(filled ? Theme.accent : .white)
                         .frame(width: 36, height: 36)
-                        .background(filled ? .white : Theme.teal, in: Circle())
+                        .background(filled ? .white : Theme.accent, in: Circle())
                     Image(systemName: "heart").foregroundStyle(filled ? .white.opacity(0.9) : Theme.graphite)
                     Spacer()
                 }
             }
             .padding(20)
             .frame(width: 280, height: 190, alignment: .leading)
-            .background(filled ? Theme.teal : Theme.surface,
+            .background(filled ? Theme.accent : Theme.surface,
                         in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(filled ? .clear : Theme.hairline, lineWidth: 1))

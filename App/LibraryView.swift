@@ -133,9 +133,9 @@ struct LibraryView: View {
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: "arrow.up.arrow.down").font(.system(size: 11))
-                Text(songSort.rawValue).retro(10, .medium, color: Theme.teal, tracking: 1)
+                Text(songSort.rawValue).retro(10, .medium, color: Theme.accent, tracking: 1)
             }
-            .foregroundStyle(Theme.teal)
+            .foregroundStyle(Theme.accent)
         }
     }
 
