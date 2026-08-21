@@ -20,9 +20,9 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 30) {
                     header
                     curated
-                    if !player.recentlyPlayed.isEmpty { songShelf("Recently Played", player.recentlyPlayed) }
-                    if !favorites.isEmpty { songShelf("Favourites", favorites) }
-                    if !recentlyAdded.isEmpty { songShelf("Recently Added", recentlyAdded) }
+                    if !favorites.isEmpty { songShelf("Favourites", favorites, size: 150) }
+                    if !player.recentlyPlayed.isEmpty { songShelf("Recently Played", player.recentlyPlayed, size: 92) }
+                    if !recentlyAdded.isEmpty { songShelf("Recently Added", recentlyAdded, size: 92) }
                     if !mostListened.isEmpty { mostListenedSection }
                 }
                 .padding(.top, 12)
@@ -93,20 +93,21 @@ struct HomeView: View {
 
     // MARK: - Song shelf (horizontal)
 
-    private func songShelf(_ title: String, _ songs: [Song]) -> some View {
+    private func songShelf(_ title: String, _ songs: [Song], size: CGFloat = 150) -> some View {
         let items = Array(songs.prefix(20))
+        let small = size < 120
         return VStack(alignment: .leading, spacing: 14) {
             SectionHeaderLink(title: title) { SongsScreen(title: title, songs: songs) }
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 16) {
+                HStack(alignment: .top, spacing: small ? 12 : 16) {
                     ForEach(Array(items.enumerated()), id: \.offset) { index, song in
                         Button { player.play(items, startAt: index) } label: {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ArtworkImage(coverArt: song.coverArt, size: 150, shape: .sleeve, corner: 14)
-                                Text(song.title).retro(12, .semibold).lineLimit(1)
-                                    .frame(width: 150, alignment: .leading)
-                                Text(song.artist ?? "").retro(9, .light, color: Theme.graphite, tracking: 1)
-                                    .lineLimit(1).frame(width: 150, alignment: .leading)
+                            VStack(alignment: .leading, spacing: small ? 6 : 8) {
+                                ArtworkImage(coverArt: song.coverArt, size: size, shape: .sleeve, corner: small ? 10 : 14)
+                                Text(song.title).retro(small ? 10 : 12, .semibold).lineLimit(1)
+                                    .frame(width: size, alignment: .leading)
+                                Text(song.artist ?? "").retro(small ? 8 : 9, .light, color: Theme.graphite, tracking: 1)
+                                    .lineLimit(1).frame(width: size, alignment: .leading)
                             }
                         }
                         .buttonStyle(.plain)
