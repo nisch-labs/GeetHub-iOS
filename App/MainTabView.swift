@@ -50,13 +50,16 @@ struct MainTabView: View {
 
     private func demoIfRequested(_ player: PlayerEngine) async {
         #if DEBUG
-        guard ProcessInfo.processInfo.environment["GEETHUB_DEMO"] == "play",
+        let demo = ProcessInfo.processInfo.environment["GEETHUB_DEMO"]
+        guard demo == "play" || demo == "playonly",
               !player.hasTrack, let client = session.client else { return }
         if let album = (try? await client.albumList(type: "alphabeticalByName", size: 20))?.first,
            let songs = (try? await client.album(id: album.id))?.song, !songs.isEmpty {
             player.play(songs, startAt: 0)
-            try? await Task.sleep(for: .seconds(2))
-            showPlayer = true
+            if demo == "play" {
+                try? await Task.sleep(for: .seconds(2))
+                showPlayer = true
+            }
         }
         #endif
     }

@@ -11,41 +11,30 @@ struct NowPlayingBar: View {
     var body: some View {
         if let song = player.current {
             Button(action: onTap) {
-                VStack(spacing: 0) {
-                    miniProgress
-                    HStack(spacing: 10) {
-                        ArtworkImage(coverArt: song.coverArt, size: 38, shape: .sleeve, corner: 8)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(song.title).retro(13, .medium).lineLimit(1)
-                            Text(song.artist ?? "").retro(9, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
-                        }
-                        Spacer()
-                        Button { player.togglePlayPause() } label: {
-                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.title3).foregroundStyle(Theme.teal)
-                        }.buttonStyle(.plain)
-                        Button { player.next() } label: {
-                            Image(systemName: "forward.end").font(.body).foregroundStyle(Theme.ink)
-                        }.buttonStyle(.plain).padding(.leading, 4)
+                HStack(spacing: 12) {
+                    ArtworkImage(coverArt: song.coverArt, size: 40, shape: .sleeve, corner: 9)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(song.title).retro(13, .medium).lineLimit(1)
+                        Text(song.artist ?? "").retro(9, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
                     }
-                    .padding(.horizontal, 14).padding(.vertical, 9)
+                    Spacer(minLength: 8)
+                    Button { player.togglePlayPause() } label: {
+                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.title3).foregroundStyle(Theme.teal)
+                    }.buttonStyle(.plain)
+                    Button { player.next() } label: {
+                        Image(systemName: "forward.end").font(.body).foregroundStyle(Theme.ink)
+                    }.buttonStyle(.plain).padding(.leading, 2)
                 }
-                .background(Theme.surface)
-                .overlay(Rectangle().fill(Theme.hairline).frame(height: 1), alignment: .top)
+                .padding(.horizontal, 14).padding(.vertical, 9)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+                .padding(.horizontal, 14)
             }
             .buttonStyle(.plain)
         }
-    }
-
-    private var miniProgress: some View {
-        GeometryReader { geo in
-            let frac = player.duration > 0 ? min(max(player.currentTime / player.duration, 0), 1) : 0
-            ZStack(alignment: .leading) {
-                Rectangle().fill(Theme.hairline)
-                Rectangle().fill(Theme.teal).frame(width: geo.size.width * frac)
-            }
-        }
-        .frame(height: 2)
     }
 }
 

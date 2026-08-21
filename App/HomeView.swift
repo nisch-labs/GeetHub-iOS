@@ -22,7 +22,6 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 32) {
                     header
-                    headline
                     chips
                     featuredSection
                     listSection
@@ -65,13 +64,6 @@ struct HomeView: View {
                 .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
         }
         .buttonStyle(.plain)
-    }
-
-    private var headline: some View {
-        Text("Your records,\nanytime.")
-            .retro(38, .bold, tracking: 0.5)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 20)
     }
 
     private var timeGreeting: String {
