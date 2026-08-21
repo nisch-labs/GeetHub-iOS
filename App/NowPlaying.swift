@@ -163,12 +163,23 @@ struct FullPlayerView: View {
         }
     }
 
-    // Title, then artist
+    // Title (marquee), then artist + YouTube badge
     private var trackInfo: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(player.current?.title ?? "—").retro(24, .semibold, tracking: 1).lineLimit(1)
-            Text(player.current?.artist ?? "")
-                .retro(12, .regular, color: Theme.graphite, tracking: 2).lineLimit(1)
+        VStack(alignment: .leading, spacing: 6) {
+            MarqueeText(text: player.current?.title ?? "—", size: 24, weight: .semibold, tracking: 1)
+                .id(player.current?.id)
+            HStack(spacing: 8) {
+                Text(player.current?.artist ?? "")
+                    .retro(12, .regular, color: Theme.graphite, tracking: 2).lineLimit(1)
+                if player.current?.isYouTube == true {
+                    HStack(spacing: 4) {
+                        Image(systemName: "play.rectangle.fill").font(.system(size: 10))
+                        Text("YouTube").retro(9, .semibold, color: .white, tracking: 1)
+                    }
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background(Color(red: 0.90, green: 0.13, blue: 0.13), in: Capsule())
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 28)
