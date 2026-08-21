@@ -22,15 +22,23 @@ struct AlbumDetailView: View {
                     Text(album.artist ?? "").retro(12, .light, color: Theme.graphite, tracking: 2)
                 }
 
-                Button { player.play(songs, startAt: 0) } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "play.fill")
-                        Text("Play").retro(14, .semibold, color: .white, tracking: 2)
+                HStack(spacing: 12) {
+                    Button { player.play(songs, startAt: 0) } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "play.fill")
+                            Text("Play").retro(14, .semibold, color: .white, tracking: 2)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity).padding(.vertical, 14)
+                        .background(Theme.teal)
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity).padding(.vertical, 14)
-                    .background(Theme.teal)
+                    Button { player.playShuffled(songs) } label: {
+                        Image(systemName: "shuffle").foregroundStyle(Theme.teal)
+                            .frame(width: 52, height: 50)
+                            .overlay(Rectangle().strokeBorder(Theme.teal, lineWidth: 1.5))
+                    }
                 }
+                .buttonStyle(.plain)
                 .disabled(songs.isEmpty)
                 .padding(.horizontal, 40)
 

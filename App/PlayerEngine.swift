@@ -98,6 +98,13 @@ final class PlayerEngine {
         startCurrent()
     }
 
+    func playShuffled(_ songs: [Song]) {
+        guard !songs.isEmpty else { return }
+        if !queue.isShuffled { queue.setShuffled(true) }
+        queue.load(songs, startAt: Int.random(in: 0..<songs.count))
+        startCurrent()
+    }
+
     func togglePlayPause() {
         if isPlaying { player.pause(); isPlaying = false }
         else { player.play(); isPlaying = true }
