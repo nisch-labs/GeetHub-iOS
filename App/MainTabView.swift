@@ -23,14 +23,14 @@ struct MainTabView: View {
                     Tab("", systemImage: "square.stack", value: 1) {
                         LibraryView().id(theme.choice)
                     }
+                    Tab("", systemImage: "heart", value: 2) {
+                        FavoritesView().id(theme.choice)
+                    }
                     Tab("", systemImage: "magnifyingglass", value: 3) {
                         SearchView().id(theme.choice)
                     }
                     Tab("", systemImage: "gearshape", value: 4) {
                         SettingsView().id(theme.choice)
-                    }
-                    Tab("", systemImage: "heart", value: 2) {
-                        FavoritesView().id(theme.choice)
                     }
                 }
                 .tabBarMinimizeBehavior(.onScrollDown)

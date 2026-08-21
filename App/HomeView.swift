@@ -96,10 +96,23 @@ struct HomeView: View {
     private func albumGridSection(_ title: String, _ albums: [Album]) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeaderLink(title: title) { AlbumGridScreen(title: title, albums: albums) }
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                ForEach(albums.prefix(4)) { AlbumMiniCard(album: $0) }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 16) {
+                    ForEach(albums) { album in
+                        NavigationLink(value: album) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ArtworkImage(coverArt: album.coverArt, size: 150, shape: .sleeve, corner: 14)
+                                Text(album.name).retro(12, .semibold).lineLimit(1)
+                                    .frame(width: 150, alignment: .leading)
+                                Text(album.artist ?? "").retro(9, .light, color: Theme.graphite, tracking: 1)
+                                    .lineLimit(1).frame(width: 150, alignment: .leading)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
         }
     }
 
@@ -199,28 +212,6 @@ private struct CompactCard: View {
                         in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(filled ? .clear : Theme.hairline, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-/// Horizontal mini album card (thumb + artist + title) for 2-column grids.
-private struct AlbumMiniCard: View {
-    let album: Album
-
-    var body: some View {
-        NavigationLink(value: album) {
-            HStack(spacing: 10) {
-                ArtworkImage(coverArt: album.coverArt, size: 50, shape: .sleeve, corner: 10)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(album.artist ?? "").retro(9, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
-                    Text(album.name).retro(12, .semibold).lineLimit(1)
-                }
-                Spacer(minLength: 2)
-            }
-            .padding(8)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
