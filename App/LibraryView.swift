@@ -28,7 +28,7 @@ struct LibraryView: View {
         NavigationStack {
             VStack(spacing: 14) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Library").retro(30, .bold, tracking: 1)
+                    Text("Library").retro(20, .bold, tracking: 1)
                     Spacer()
                     if tab == 0 { sortMenu }
                 }

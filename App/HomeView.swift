@@ -25,9 +25,9 @@ struct HomeView: View {
                     header
                     curated
                     if !favorites.isEmpty { songShelf("Favourites", favorites, size: 150) }
+                    if !favouritePlaylists.isEmpty { playlistShelf }
                     if !player.recentlyPlayed.isEmpty { songShelf("Recently Played", player.recentlyPlayed, size: 92) }
                     if !recentlyAdded.isEmpty { songShelf("Recently Added", recentlyAdded, size: 92) }
-                    if !favouritePlaylists.isEmpty { playlistShelf }
                     if !mostListened.isEmpty { mostListenedSection }
                 }
                 .padding(.top, 12)

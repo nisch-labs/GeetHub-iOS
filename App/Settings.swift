@@ -7,7 +7,7 @@ struct SettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
-                    Text("Settings").retro(30, .bold, tracking: 1)
+                    Text("Settings").retro(20, .bold, tracking: 1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 4)
 

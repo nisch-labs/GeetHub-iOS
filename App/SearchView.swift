@@ -52,7 +52,7 @@ struct SearchView: View {
             .paperBackground()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .principal) { Text("Search").retro(14, .semibold, tracking: 2) }
+                ToolbarItem(placement: .topBarLeading) { Text("Search").retro(20, .bold, tracking: 1) }
             }
             .overlay(alignment: .top) { if isSearching { ProgressView().padding(.top, 4) } }
             .overlay(alignment: .bottom) { toastView }

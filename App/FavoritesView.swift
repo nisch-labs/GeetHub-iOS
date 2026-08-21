@@ -15,7 +15,7 @@ struct FavoritesView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     HStack(alignment: .firstTextBaseline) {
-                        Text("Favorites").retro(34, .bold, tracking: 1)
+                        Text("Favourites").retro(20, .bold, tracking: 1)
                         Spacer()
                         if !songs.isEmpty {
                             HStack(spacing: 18) {
