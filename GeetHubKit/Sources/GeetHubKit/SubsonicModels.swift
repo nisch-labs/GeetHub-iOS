@@ -24,6 +24,9 @@ public struct SubsonicResponse: Decodable, Sendable {
     public let starred2: Starred2?
     public let similarSongs2: SimilarSongs2?
     public let randomSongs: RandomSongs?
+    public let genres: Genres?
+    public let songsByGenre: SongsByGenre?
+    public let artist: ArtistWithAlbums?
 
     public var isOK: Bool { status == "ok" }
 }
@@ -137,6 +140,27 @@ public struct SimilarSongs2: Decodable, Sendable {
 
 public struct RandomSongs: Decodable, Sendable {
     public let song: [Song]?
+}
+
+public struct Genre: Decodable, Sendable, Identifiable, Hashable {
+    public let value: String
+    public let songCount: Int?
+    public var id: String { value }
+    public var name: String { value }
+}
+
+public struct Genres: Decodable, Sendable {
+    public let genre: [Genre]?
+}
+
+public struct SongsByGenre: Decodable, Sendable {
+    public let song: [Song]?
+}
+
+public struct ArtistWithAlbums: Decodable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let album: [Album]?
 }
 
 public struct PlaylistWithSongs: Decodable, Sendable, Identifiable {

@@ -87,6 +87,32 @@ public struct SubsonicClient: Sendable {
         return r.searchResult3 ?? SearchResult3(artist: nil, album: nil, song: nil)
     }
 
+    /// Every song (server-paged). Navidrome returns all songs for an empty query.
+    public func allSongs(size: Int = 500, offset: Int = 0) async throws -> [Song] {
+        try await send("search3.view", [
+            .init(name: "query", value: ""),
+            .init(name: "songCount", value: String(size)),
+            .init(name: "songOffset", value: String(offset)),
+            .init(name: "albumCount", value: "0"),
+            .init(name: "artistCount", value: "0"),
+        ]).searchResult3?.song ?? []
+    }
+
+    public func genres() async throws -> [Genre] {
+        try await send("getGenres.view").genres?.genre ?? []
+    }
+
+    public func songsByGenre(_ genre: String, count: Int = 100) async throws -> [Song] {
+        try await send("getSongsByGenre.view", [
+            .init(name: "genre", value: genre),
+            .init(name: "count", value: String(count)),
+        ]).songsByGenre?.song ?? []
+    }
+
+    public func artist(id: String) async throws -> ArtistWithAlbums? {
+        try await send("getArtist.view", [.init(name: "id", value: id)]).artist
+    }
+
     public func playlists() async throws -> [Playlist] {
         try await send("getPlaylists.view").playlists?.playlist ?? []
     }
