@@ -1,4 +1,4 @@
-// App-target file. Browse the library — albums grid (v1).
+// App-target file. Browse the library — a wall of album sleeves.
 import SwiftUI
 import GeetHubKit
 
@@ -8,32 +8,47 @@ struct LibraryView: View {
     @State private var isLoading = true
     @State private var error: String?
 
-    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
+    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 20)]
 
     var body: some View {
         NavigationStack {
-            Group {
+            ScrollView {
+                header
                 if isLoading {
-                    ProgressView()
+                    ProgressView().padding(.top, 60)
                 } else if let error {
-                    ContentUnavailableView("Couldn't load library", systemImage: "wifi.slash", description: Text(error))
+                    ContentUnavailableView("Can't reach your library", systemImage: "wifi.slash", description: Text(error))
+                        .padding(.top, 40)
                 } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(albums) { album in
-                                NavigationLink(value: album) {
-                                    AlbumCell(album: album).foregroundStyle(.primary)
-                                }
+                    LazyVGrid(columns: columns, spacing: 24) {
+                        ForEach(albums) { album in
+                            NavigationLink(value: album) {
+                                AlbumCell(album: album)
                             }
+                            .buttonStyle(.plain)
                         }
-                        .padding()
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 120)
                 }
             }
-            .navigationTitle("Library")
+            .paperBackground()
+            .navigationBarHidden(true)
             .navigationDestination(for: Album.self) { AlbumDetailView(album: $0) }
         }
         .task { await load() }
+    }
+
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Library").retro(34, .bold, tracking: 1)
+            Spacer()
+            Text("\(albums.count) albums")
+                .retro(11, .light, color: Theme.graphite, tracking: 1.5)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .padding(.bottom, 16)
     }
 
     private func load() async {

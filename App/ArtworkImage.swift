@@ -1,27 +1,41 @@
-// App-target file. Async cover-art loader from the Subsonic getCoverArt endpoint.
+// App-target file. Async cover art. Two shapes: `.sleeve` (sharp square — the
+// album sleeve in grids) and `.record` (circle — the vinyl on the platter).
 import SwiftUI
 import GeetHubKit
+
+enum ArtShape { case sleeve, record }
 
 struct ArtworkImage: View {
     @Environment(Session.self) private var session
     let coverArt: String?
     var size: CGFloat = 56
+    var shape: ArtShape = .sleeve
 
     var body: some View {
-        Group {
-            if let url = artworkURL {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image): image.resizable().scaledToFill()
-                    default: placeholder
-                    }
-                }
-            } else {
-                placeholder
-            }
+        let framed = content.frame(width: size, height: size)
+        switch shape {
+        case .sleeve:
+            framed
+                .clipShape(Rectangle())
+                .overlay(Rectangle().strokeBorder(Theme.hairline, lineWidth: 1))
+        case .record:
+            framed
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
         }
-        .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: size < 80 ? 6 : 10, style: .continuous))
+    }
+
+    @ViewBuilder private var content: some View {
+        if let url = artworkURL {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image): image.resizable().scaledToFill()
+                default: placeholder
+                }
+            }
+        } else {
+            placeholder
+        }
     }
 
     private var artworkURL: URL? {
@@ -30,8 +44,10 @@ struct ArtworkImage: View {
     }
 
     private var placeholder: some View {
-        RoundedRectangle(cornerRadius: size < 80 ? 6 : 10, style: .continuous)
-            .fill(.quaternary)
-            .overlay(Image(systemName: "music.note").foregroundStyle(.secondary).font(.system(size: size * 0.4)))
+        Theme.surface.overlay(
+            Image(systemName: "opticaldisc")
+                .font(.system(size: size * 0.35))
+                .foregroundStyle(Theme.graphite)
+        )
     }
 }

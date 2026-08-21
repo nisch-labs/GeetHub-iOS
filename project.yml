@@ -24,6 +24,8 @@ targets:
         UILaunchScreen: {}
         UIBackgroundModes:
           - audio
+        UIAppFonts:
+          - Oswald.ttf
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         # Self-hosted servers may be plain http (Tailscale/LAN); allow it.

@@ -1,11 +1,7 @@
-// App-target file (SwiftUI). Add to the Xcode app target — not compiled by the
-// GeetHubKit Swift Package. The login *logic* it drives (Session, Keychain,
-// ping-validate) lives in GeetHubKit and is unit-tested.
+// App-target file. Server login — retro liner-note styling.
 import SwiftUI
 import GeetHubKit
 
-/// The server login screen — enter URL + Navidrome username + password, same as
-/// Amperfy. Point it at the proxy (e.g. http://100.75.88.86:4544) or Navidrome.
 struct LoginView: View {
     @Environment(Session.self) private var session
 
@@ -15,53 +11,72 @@ struct LoginView: View {
     @State private var isConnecting = false
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 22) {
             Spacer()
 
-            Image(systemName: "music.note.house.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(.tint)
-            Text("Geet-Hub")
-                .font(.largeTitle.bold())
-            Text("Sign in to your music server")
-                .foregroundStyle(.secondary)
-
-            VStack(spacing: 12) {
-                TextField("Server URL — e.g. https://musicv2.nixsocket.com", text: $urlString)
-                    .textContentType(.URL)
-                    .keyboardType(.URL)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                TextField("Username", text: $username)
-                    .textContentType(.username)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                SecureField("Password", text: $password)
-                    .textContentType(.password)
+            Image(systemName: "opticaldisc")
+                .font(.system(size: 64))
+                .foregroundStyle(Theme.teal)
+            VStack(spacing: 4) {
+                Text("Geet-Hub").retro(40, .bold, tracking: 2)
+                Text("Your records, anywhere")
+                    .retro(11, .light, color: Theme.graphite, tracking: 3)
             }
-            .textFieldStyle(.roundedBorder)
+            .padding(.bottom, 8)
+
+            VStack(spacing: 0) {
+                field("Server", text: $urlString, secure: false, keyboard: .URL)
+                line
+                field("User", text: $username, secure: false, keyboard: .default)
+                line
+                field("Password", text: $password, secure: true, keyboard: .default)
+            }
+            .background(Theme.surface)
+            .overlay(Rectangle().strokeBorder(Theme.hairline, lineWidth: 1))
 
             if case .failed(let message) = session.state {
-                Text(message)
-                    .font(.callout)
-                    .foregroundStyle(.red)
+                Text(message).retro(11, .regular, color: Theme.teal, tracking: 1)
                     .multilineTextAlignment(.center)
             }
 
             Button(action: connect) {
-                if isConnecting {
-                    ProgressView().frame(maxWidth: .infinity)
-                } else {
-                    Text("Log in").frame(maxWidth: .infinity)
+                Group {
+                    if isConnecting { ProgressView().tint(.white) }
+                    else { Text("Log in").retro(15, .semibold, color: .white, tracking: 3) }
                 }
+                .frame(maxWidth: .infinity).padding(.vertical, 15)
+                .background(canSubmit ? Theme.teal : Theme.graphite)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(isConnecting || urlString.isEmpty || username.isEmpty)
+            .disabled(!canSubmit || isConnecting)
 
             Spacer()
         }
-        .padding(24)
+        .padding(28)
+        .paperBackground()
+    }
+
+    private var canSubmit: Bool { !urlString.isEmpty && !username.isEmpty }
+    private var line: some View { Rectangle().fill(Theme.hairline).frame(height: 1) }
+
+    private func field(_ label: String, text: Binding<String>, secure: Bool,
+                       keyboard: UIKeyboardType) -> some View {
+        HStack(spacing: 12) {
+            Text(label).retro(11, .medium, color: Theme.graphite, tracking: 1.5)
+                .frame(width: 78, alignment: .leading)
+            Group {
+                if secure {
+                    SecureField("", text: text)
+                } else {
+                    TextField("", text: text)
+                        .keyboardType(keyboard)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                }
+            }
+            .font(.system(.body, design: .monospaced))
+            .foregroundStyle(Theme.ink)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 15)
     }
 
     private func connect() {
@@ -74,6 +89,5 @@ struct LoginView: View {
 }
 
 #Preview {
-    LoginView()
-        .environment(Session(store: InMemoryCredentialStore()))
+    LoginView().environment(Session(store: InMemoryCredentialStore()))
 }

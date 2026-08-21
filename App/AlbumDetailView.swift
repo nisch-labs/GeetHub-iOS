@@ -1,4 +1,4 @@
-// App-target file. Album detail — song list + play.
+// App-target file. Album detail — sleeve, play, tracklist.
 import SwiftUI
 import GeetHubKit
 
@@ -11,41 +11,57 @@ struct AlbumDetailView: View {
     @State private var isLoading = true
 
     var body: some View {
-        List {
-            Section {
-                HStack(spacing: 16) {
-                    ArtworkImage(coverArt: album.coverArt, size: 100)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(album.name).font(.title3.bold()).lineLimit(2)
-                        Text(album.artist ?? "").foregroundStyle(.secondary)
-                        if let n = album.songCount { Text("\(n) songs").font(.caption).foregroundStyle(.secondary) }
-                    }
-                }
-                Button {
-                    player.play(songs, startAt: 0)
-                } label: {
-                    Label("Play", systemImage: "play.fill").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(songs.isEmpty)
-            }
+        ScrollView {
+            VStack(spacing: 20) {
+                ArtworkImage(coverArt: album.coverArt, size: 220, shape: .sleeve)
+                    .shadow(color: .black.opacity(0.1), radius: 16, y: 8)
+                    .padding(.top, 8)
 
-            Section {
-                ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                    Button {
-                        player.play(songs, startAt: index)
-                    } label: {
-                        SongRow(song: song, isPlaying: player.current?.id == song.id)
-                            .foregroundStyle(.primary)
+                VStack(spacing: 6) {
+                    Text(album.name).retro(22, .semibold, tracking: 1).multilineTextAlignment(.center)
+                    Text(album.artist ?? "").retro(12, .light, color: Theme.graphite, tracking: 2)
+                }
+
+                Button { player.play(songs, startAt: 0) } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "play.fill")
+                        Text("Play").retro(14, .semibold, color: .white, tracking: 2)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity).padding(.vertical, 14)
+                    .background(Theme.teal)
+                }
+                .disabled(songs.isEmpty)
+                .padding(.horizontal, 40)
+
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+                        Button { player.play(songs, startAt: index) } label: {
+                            HStack(spacing: 12) {
+                                Text("\(index + 1)")
+                                    .font(.system(.footnote, design: .monospaced))
+                                    .foregroundStyle(Theme.graphite).frame(width: 24)
+                                SongRow(song: song, isPlaying: player.current?.id == song.id)
+                            }
+                            .padding(.horizontal, 20).padding(.vertical, 10)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 56)
                     }
                 }
+                .padding(.bottom, 120)
             }
         }
-        .listStyle(.plain)
-        .navigationTitle(album.name)
+        .paperBackground()
         .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(album.name).retro(12, .medium, tracking: 2).lineLimit(1)
+            }
+        }
         .overlay { if isLoading { ProgressView() } }
+        .task { await load() }
     }
 
     private func load() async {

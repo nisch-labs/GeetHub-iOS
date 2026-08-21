@@ -12,16 +12,19 @@
 		268D8B2F2C88A3DB2112870A /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB6336EB46E454A3079DE6B /* LoginView.swift */; };
 		34DF472E6688008C5E86A33F /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3494DA7578AC8450113EC8 /* MainTabView.swift */; };
 		402E5D26FA3F5644326D92B1 /* ArtworkImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A691BD922302A301ED876063 /* ArtworkImage.swift */; };
+		4BE7F060EA2FBCFF8BE493D0 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD4C0ED5F6DEB5AD17315601 /* Theme.swift */; };
 		7CFD7ADA83F61236234A5818 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51D52ED5DA57A65425ED9950 /* SearchView.swift */; };
 		7E8FD766DAE5DDDCE2A453CD /* GeetHubApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C58B8F66B18F08305D87D3F6 /* GeetHubApp.swift */; };
 		84B5CEC6C553DE421C11C7E3 /* GeetHubKit in Frameworks */ = {isa = PBXBuildFile; productRef = B29BCD66DF2AD5E2AEFCC065 /* GeetHubKit */; };
 		C34AA179F3E85195F520A012 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCFB1AAF3672E8264D703B02 /* LibraryView.swift */; };
 		C46BAA616311DF4A9BB092FF /* Rows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27110212F9155543B4E96950 /* Rows.swift */; };
+		D7FEACD290BA5E0A8FBF2A06 /* Oswald.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0BDB3371554FAFFBD773DA1F /* Oswald.ttf */; };
 		E8F3BE8DC5A7FA43D03776E5 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392AC81AA29B333654DECC45 /* RootView.swift */; };
 		F4C91E53637FD9214DBDDFE8 /* PlayerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B759ABEB2F83899AB6B2ABCE /* PlayerEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0BDB3371554FAFFBD773DA1F /* Oswald.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Oswald.ttf; sourceTree = "<group>"; };
 		1B249889E11E401461C26D75 /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
 		27110212F9155543B4E96950 /* Rows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rows.swift; sourceTree = "<group>"; };
 		392AC81AA29B333654DECC45 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -35,6 +38,7 @@
 		C58B8F66B18F08305D87D3F6 /* GeetHubApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeetHubApp.swift; sourceTree = "<group>"; };
 		E1D6956BE3860F96F2216A15 /* GeetHubKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GeetHubKit; path = GeetHubKit; sourceTree = SOURCE_ROOT; };
 		FCFB1AAF3672E8264D703B02 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		FD4C0ED5F6DEB5AD17315601 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		FEB6336EB46E454A3079DE6B /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -82,8 +86,18 @@
 				392AC81AA29B333654DECC45 /* RootView.swift */,
 				27110212F9155543B4E96950 /* Rows.swift */,
 				51D52ED5DA57A65425ED9950 /* SearchView.swift */,
+				FD4C0ED5F6DEB5AD17315601 /* Theme.swift */,
+				E9DAAFB0ED1FD70BF4D268D5 /* Fonts */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		E9DAAFB0ED1FD70BF4D268D5 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				0BDB3371554FAFFBD773DA1F /* Oswald.ttf */,
+			);
+			path = Fonts;
 			sourceTree = "<group>";
 		};
 		FED83EC870F88B2178D22154 /* Packages */ = {
@@ -102,6 +116,7 @@
 			buildConfigurationList = FC0577A58459DBF34BB0150D /* Build configuration list for PBXNativeTarget "GeetHub" */;
 			buildPhases = (
 				87B13050C1B272D351CC520B /* Sources */,
+				021D95836B93C9FCFAFDE96E /* Resources */,
 				28B273C466E1B2E942FAF2EA /* Frameworks */,
 			);
 			buildRules = (
@@ -149,6 +164,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		021D95836B93C9FCFAFDE96E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D7FEACD290BA5E0A8FBF2A06 /* Oswald.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		87B13050C1B272D351CC520B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -165,6 +191,7 @@
 				E8F3BE8DC5A7FA43D03776E5 /* RootView.swift in Sources */,
 				C46BAA616311DF4A9BB092FF /* Rows.swift in Sources */,
 				7CFD7ADA83F61236234A5818 /* SearchView.swift in Sources */,
+				4BE7F060EA2FBCFF8BE493D0 /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

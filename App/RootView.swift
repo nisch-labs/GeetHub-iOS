@@ -15,6 +15,8 @@ struct RootView: View {
                 LoginView()
             }
         }
+        .tint(Theme.teal)
+        .preferredColorScheme(.light)   // the vinyl look is intentionally paper-light
         .task { await start() }
     }
 

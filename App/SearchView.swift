@@ -1,5 +1,4 @@
-// App-target file. Live search — real library hits + YouTube results (from the
-// proxy), tap to play, and Save-to-Library on YouTube rows.
+// App-target file. Live search — library + YouTube results, play, Save-to-Library.
 import SwiftUI
 import GeetHubKit
 
@@ -18,52 +17,53 @@ struct SearchView: View {
         NavigationStack {
             List {
                 ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                    HStack {
-                        Button {
-                            player.play(songs, startAt: index)
-                        } label: {
+                    HStack(spacing: 8) {
+                        Button { player.play(songs, startAt: index) } label: {
                             SongRow(song: song, isPlaying: player.current?.id == song.id)
-                                .foregroundStyle(.primary)
+                                .contentShape(Rectangle())
                         }
-                        if song.isYouTube {
-                            Spacer(minLength: 4)
-                            saveButton(for: song)
-                        }
+                        .buttonStyle(.plain)
+                        if song.isYouTube { saveButton(for: song) }
                     }
+                    .listRowBackground(Theme.surface)
+                    .listRowSeparatorTint(Theme.hairline)
                 }
                 if !isSearching && songs.isEmpty && !query.isEmpty {
-                    ContentUnavailableView.search(text: query)
+                    ContentUnavailableView.search(text: query).listRowBackground(Theme.paper)
                 }
             }
             .listStyle(.plain)
-            .navigationTitle("Search")
+            .scrollContentBackground(.hidden)
+            .paperBackground()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) { Text("Search").retro(14, .semibold, tracking: 2) }
+            }
             .overlay(alignment: .top) { if isSearching { ProgressView().padding(.top, 4) } }
             .overlay(alignment: .bottom) { toastView }
         }
-        .searchable(text: $query, prompt: "Songs in your library or on YouTube")
+        .tint(Theme.teal)
+        .searchable(text: $query, prompt: "Your library or YouTube")
         .onChange(of: query) { _, q in scheduleSearch(q) }
     }
 
     @ViewBuilder private func saveButton(for song: Song) -> some View {
         if saved.contains(song.id) {
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.teal)
         } else {
-            Button {
-                Task { await save(song) }
-            } label: {
-                Image(systemName: "arrow.down.circle").font(.title3)
+            Button { Task { await save(song) } } label: {
+                Image(systemName: "arrow.down.circle").font(.title3).foregroundStyle(Theme.teal)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.tint)
         }
     }
 
     @ViewBuilder private var toastView: some View {
         if let toast {
-            Text(toast)
-                .font(.callout).padding(.horizontal, 16).padding(.vertical, 10)
-                .background(.thinMaterial, in: Capsule())
-                .padding(.bottom, 8)
+            Text(toast).retro(11, .medium, color: .white, tracking: 1)
+                .padding(.horizontal, 16).padding(.vertical, 11)
+                .background(Theme.ink, in: Capsule())
+                .padding(.bottom, 76)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
@@ -73,7 +73,7 @@ struct SearchView: View {
         let text = q.trimmingCharacters(in: .whitespaces)
         guard text.count >= 2 else { songs = []; isSearching = false; return }
         searchTask = Task {
-            try? await Task.sleep(for: .milliseconds(300))   // debounce
+            try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled, let client = session.client else { return }
             isSearching = true
             let result = try? await client.search(text, songCount: 40)
@@ -88,9 +88,9 @@ struct SearchView: View {
         do {
             try await client.saveToLibrary(youtubeId: song.id)
             saved.insert(song.id)
-            showToast("Saving “\(song.title)” to your library…")
+            showToast("Saving “\(song.title)” to your library")
         } catch {
-            showToast("Couldn't start download.")
+            showToast("Couldn't start the download")
         }
     }
 

@@ -1,4 +1,4 @@
-// App-target file. Reusable row/cell views.
+// App-target file. Reusable row/cell views, retro liner-note styling.
 import SwiftUI
 import GeetHubKit
 
@@ -8,28 +8,30 @@ struct SongRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ArtworkImage(coverArt: song.coverArt, size: 44)
-            VStack(alignment: .leading, spacing: 2) {
+            ArtworkImage(coverArt: song.coverArt, size: 44, shape: .sleeve)
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     if isPlaying {
-                        Image(systemName: "speaker.wave.2.fill").font(.caption2).foregroundStyle(.tint)
+                        Image(systemName: "waveform").font(.caption2).foregroundStyle(Theme.teal)
                     }
-                    Text(song.title).foregroundStyle(Color.primary).lineLimit(1)
+                    Text(song.title).retro(15, .medium).lineLimit(1)
                 }
                 Text(song.artist ?? "Unknown artist")
-                    .font(.subheadline).foregroundStyle(Color.secondary).lineLimit(1)
+                    .retro(11, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
             }
             Spacer(minLength: 8)
             if song.isYouTube {
                 Text("YouTube")
-                    .font(.caption2.weight(.semibold))
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(.red.opacity(0.15), in: Capsule())
-                    .foregroundStyle(.red)
+                    .retro(9, .semibold, color: Theme.teal, tracking: 1.5)
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .overlay(Capsule().strokeBorder(Theme.teal.opacity(0.4), lineWidth: 1))
             } else if let d = song.duration {
-                Text(Self.time(d)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                Text(Self.time(d))
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(Theme.graphite)
             }
         }
+        .padding(.vertical, 2)
     }
 
     static func time(_ seconds: Int) -> String {
@@ -41,12 +43,11 @@ struct AlbumCell: View {
     let album: Album
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ArtworkImage(coverArt: album.coverArt, size: 160)
-            Text(album.name).font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.primary).lineLimit(1)
-            Text(album.artist ?? "").font(.caption)
-                .foregroundStyle(Color.secondary).lineLimit(1)
+        VStack(alignment: .leading, spacing: 8) {
+            // The sleeve: sharp square, faint hairline.
+            ArtworkImage(coverArt: album.coverArt, size: 168, shape: .sleeve)
+            Text(album.name).retro(13, .semibold).lineLimit(1)
+            Text(album.artist ?? "").retro(10, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
         }
     }
 }
