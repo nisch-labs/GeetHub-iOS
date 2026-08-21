@@ -17,19 +17,19 @@ struct MainTabView: View {
                 // bottom accessory, and a tab bar that minimizes on scroll — the
                 // Apple Music behaviour. .id(theme.choice) re-tints on accent change.
                 TabView(selection: $selectedTab) {
-                    Tab("Home", systemImage: "house", value: 0) {
+                    Tab("", systemImage: "house", value: 0) {
                         HomeView(onSelectTab: { selectedTab = $0 }).id(theme.choice)
                     }
-                    Tab("Library", systemImage: "square.stack", value: 1) {
+                    Tab("", systemImage: "square.stack", value: 1) {
                         LibraryView().id(theme.choice)
                     }
-                    Tab("Favourites", systemImage: "heart", value: 2) {
+                    Tab("", systemImage: "heart", value: 2) {
                         FavoritesView().id(theme.choice)
                     }
-                    Tab("Settings", systemImage: "gearshape", value: 4) {
+                    Tab("", systemImage: "gearshape", value: 4) {
                         SettingsView().id(theme.choice)
                     }
-                    Tab("Search", systemImage: "magnifyingglass", value: 3, role: .search) {
+                    Tab("", systemImage: "magnifyingglass", value: 3, role: .search) {
                         SearchView().id(theme.choice)
                     }
                 }
