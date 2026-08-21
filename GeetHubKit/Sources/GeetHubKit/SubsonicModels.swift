@@ -54,6 +54,8 @@ public struct Song: Decodable, Sendable, Identifiable, Hashable {
     public let suffix: String?
     public let contentType: String?
     public let isVideo: Bool?
+    /// ISO-8601 date the track was added to the library (sortable lexically).
+    public let created: String?
     /// Present (a date string) when the item is starred/favorited.
     public let starred: String?
 

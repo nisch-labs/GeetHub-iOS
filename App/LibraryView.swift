@@ -2,9 +2,18 @@
 import SwiftUI
 import GeetHubKit
 
+enum SongSort: String, CaseIterable {
+    case title = "Name"
+    case artist = "Artist"
+    case album = "Album"
+    case added = "Recently Added"
+    case duration = "Duration"
+}
+
 struct LibraryView: View {
     @Environment(Session.self) private var session
     @State private var tab = 1   // default: Albums
+    @State private var songSort: SongSort = .title
 
     @State private var songs: [Song] = []
     @State private var albums: [Album] = []
@@ -20,6 +29,7 @@ struct LibraryView: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Library").retro(30, .bold, tracking: 1)
                     Spacer()
+                    if tab == 0 { sortMenu }
                 }
                 .padding(.horizontal, 20).padding(.top, 8)
 
@@ -28,7 +38,7 @@ struct LibraryView: View {
                 ScrollView {
                     Group {
                         switch tab {
-                        case 0: SongList(songs: songs)
+                        case 0: SongList(songs: sortedSongs)
                         case 1: albumGrid
                         case 2: artistList
                         default: playlistList
@@ -49,6 +59,14 @@ struct LibraryView: View {
             .navigationDestination(for: Playlist.self) { PlaylistDetailView(playlist: $0) }
         }
         .task { await loadTop() }
+        .task {
+            #if DEBUG
+            if let t = ProcessInfo.processInfo.environment["GEETHUB_LIBTAB"], let i = Int(t) {
+                tab = i
+                if i == 0 { await loadSongs() }
+            }
+            #endif
+        }
         .onChange(of: tab) { _, t in if t == 0 { Task { await loadSongs() } } }
     }
 
@@ -105,6 +123,35 @@ struct LibraryView: View {
             }
         }
         .padding(.top, 4)
+    }
+
+    private var sortMenu: some View {
+        Menu {
+            Picker("Sort by", selection: $songSort) {
+                ForEach(SongSort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "arrow.up.arrow.down").font(.system(size: 11))
+                Text(songSort.rawValue).retro(10, .medium, color: Theme.teal, tracking: 1)
+            }
+            .foregroundStyle(Theme.teal)
+        }
+    }
+
+    private var sortedSongs: [Song] {
+        switch songSort {
+        case .title:
+            return songs.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .artist:
+            return songs.sorted { ($0.artist ?? "").localizedCaseInsensitiveCompare($1.artist ?? "") == .orderedAscending }
+        case .album:
+            return songs.sorted { ($0.album ?? "").localizedCaseInsensitiveCompare($1.album ?? "") == .orderedAscending }
+        case .added:
+            return songs.sorted { ($0.created ?? "") > ($1.created ?? "") }   // newest first
+        case .duration:
+            return songs.sorted { ($0.duration ?? 0) < ($1.duration ?? 0) }
+        }
     }
 
     private func loadTop() async {
