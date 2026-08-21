@@ -10,14 +10,14 @@ struct ArtworkImage: View {
     let coverArt: String?
     var size: CGFloat = 56
     var shape: ArtShape = .sleeve
+    var corner: CGFloat = 12
 
     var body: some View {
         let framed = content.frame(width: size, height: size)
         switch shape {
         case .sleeve:
-            framed
-                .clipShape(Rectangle())
-                .overlay(Rectangle().strokeBorder(Theme.hairline, lineWidth: 1))
+            let r = RoundedRectangle(cornerRadius: corner, style: .continuous)
+            framed.clipShape(r).overlay(r.strokeBorder(Theme.hairline, lineWidth: 1))
         case .record:
             framed
                 .clipShape(Circle())

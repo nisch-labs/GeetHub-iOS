@@ -14,7 +14,7 @@ struct MainTabView: View {
                 ZStack(alignment: .bottom) {
                     // Native iOS 26 Liquid Glass tab bar, icon-only (no labels).
                     TabView(selection: $selectedTab) {
-                        HomeView().tag(0).tabItem { Image(systemName: "house") }
+                        HomeView(onSelectTab: { selectedTab = $0 }).tag(0).tabItem { Image(systemName: "house") }
                         LibraryView().tag(1).tabItem { Image(systemName: "square.stack") }
                         FavoritesView().tag(2).tabItem { Image(systemName: "heart") }
                         SearchView().tag(3).tabItem { Image(systemName: "magnifyingglass") }
