@@ -41,12 +41,9 @@ struct HomeView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Circle().fill(Theme.surface).frame(width: 46, height: 46)
-                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
-                .overlay(Image(systemName: "opticaldisc").foregroundStyle(Theme.accent))
             VStack(alignment: .leading, spacing: 2) {
                 Text(timeGreeting).retro(11, .light, color: Theme.graphite, tracking: 1.5)
-                Text(session.client?.credentials.username ?? "friend").retro(15, .semibold, tracking: 1)
+                Text(session.client?.credentials.username ?? "friend").retro(20, .bold, tracking: 1)
             }
             Spacer()
             roundButton("magnifyingglass") { onSelectTab(3) }

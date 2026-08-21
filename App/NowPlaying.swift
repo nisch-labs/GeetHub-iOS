@@ -87,15 +87,12 @@ struct FullPlayerView: View {
         .sheet(isPresented: $showQueue) { QueueView().environment(player) }
     }
 
-    // Header: back · album · favorite · menu
+    // Header: back · (spacer) · favorite/download · menu
     private var header: some View {
         HStack(spacing: 16) {
             Button { dismiss() } label: {
                 Image(systemName: "chevron.down").font(.headline)
             }
-            Spacer()
-            Text(player.current?.album ?? "Now Playing")
-                .retro(13, .medium, tracking: 3).lineLimit(1)
             Spacer()
             if player.current?.isYouTube == true {
                 Button { player.saveCurrentToLibrary() } label: {
