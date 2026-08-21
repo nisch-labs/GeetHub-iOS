@@ -12,17 +12,16 @@ struct MainTabView: View {
         Group {
             if let player {
                 ZStack(alignment: .bottom) {
+                    // Native iOS 26 Liquid Glass tab bar, icon-only (no labels).
                     TabView(selection: $selectedTab) {
-                        HomeView().tag(0).toolbar(.hidden, for: .tabBar)
-                        LibraryView().tag(1).toolbar(.hidden, for: .tabBar)
-                        FavoritesView().tag(2).toolbar(.hidden, for: .tabBar)
-                        SearchView().tag(3).toolbar(.hidden, for: .tabBar)
-                        SettingsView().tag(4).toolbar(.hidden, for: .tabBar)
+                        HomeView().tag(0).tabItem { Image(systemName: "house") }
+                        LibraryView().tag(1).tabItem { Image(systemName: "square.stack") }
+                        FavoritesView().tag(2).tabItem { Image(systemName: "heart") }
+                        SearchView().tag(3).tabItem { Image(systemName: "magnifyingglass") }
+                        SettingsView().tag(4).tabItem { Image(systemName: "gearshape") }
                     }
-                    VStack(spacing: 0) {
-                        NowPlayingBar(onTap: { showPlayer = true })
-                        CustomTabBar(selection: $selectedTab)
-                    }
+                    NowPlayingBar(onTap: { showPlayer = true })
+                        .padding(.bottom, 64)   // float above the glass bar
                 }
                 .environment(player)
                 .tint(Theme.teal)
@@ -53,32 +52,6 @@ struct MainTabView: View {
             showPlayer = true
         }
         #endif
-    }
-}
-
-/// Minimal icon-only bottom bar — small icons, no labels.
-struct CustomTabBar: View {
-    @Binding var selection: Int
-    private let items = ["house", "square.stack", "heart", "magnifyingglass", "gearshape"]
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(Array(items.enumerated()), id: \.offset) { index, icon in
-                Button { selection = index } label: {
-                    Image(systemName: icon)
-                        .font(.system(size: 19))
-                        .foregroundStyle(selection == index ? Theme.teal : Theme.graphite)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 30)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.top, 10)
-        .padding(.bottom, 4)
-        .background(Theme.surface.ignoresSafeArea(edges: .bottom))
-        .overlay(Rectangle().fill(Theme.hairline).frame(height: 1), alignment: .top)
     }
 }
 
