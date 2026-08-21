@@ -36,17 +36,22 @@ struct AlbumDetailView: View {
 
                 LazyVStack(spacing: 0) {
                     ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                        Button { player.play(songs, startAt: index) } label: {
-                            HStack(spacing: 12) {
-                                Text("\(index + 1)")
-                                    .font(.system(.footnote, design: .monospaced))
-                                    .foregroundStyle(Theme.graphite).frame(width: 24)
-                                SongRow(song: song, isPlaying: player.current?.id == song.id)
+                        HStack(spacing: 0) {
+                            Button { player.play(songs, startAt: index) } label: {
+                                HStack(spacing: 12) {
+                                    Text("\(index + 1)")
+                                        .font(.system(.footnote, design: .monospaced))
+                                        .foregroundStyle(Theme.graphite).frame(width: 24)
+                                    SongRow(song: song, isPlaying: player.current?.id == song.id,
+                                            favorited: player.isFavorite(song))
+                                }
+                                .padding(.leading, 20).padding(.vertical, 10)
+                                .contentShape(Rectangle())
                             }
-                            .padding(.horizontal, 20).padding(.vertical, 10)
-                            .contentShape(Rectangle())
+                            .buttonStyle(.plain)
+                            .songContextMenu(song)
+                            SongMenuButton(song: song).padding(.trailing, 12)
                         }
-                        .buttonStyle(.plain)
                         Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 56)
                     }
                 }

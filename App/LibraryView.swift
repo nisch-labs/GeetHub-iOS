@@ -36,6 +36,11 @@ struct LibraryView: View {
                     }
                     .padding(.bottom, 120)
                 }
+                .refreshable {
+                    loadedSongs = false
+                    await loadTop()
+                    if tab == 0 { await loadSongs() }
+                }
             }
             .paperBackground()
             .navigationBarHidden(true)

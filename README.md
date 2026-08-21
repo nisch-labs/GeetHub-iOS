@@ -26,12 +26,13 @@ targets are created in Xcode (see `PROJECT.md`).
   auth, favorites, smart lists (similar/random), `PlaybackQueue`
   (shuffle/repeat/up-next), Keychain credential store, and `Session` login flow.
   Compiles and unit-tested — **13 tests passing** (`swift test`).
-- ✅ `App/` — SwiftUI login screen (`LoginView` + `RootView` + `GeetHubApp`),
-  ready to add to the Xcode app target. (They import GeetHubKit, so they only
-  compile once inside the app target — not built by the package.)
-- ⬜ Library UI — browse / search / now-playing (next up).
-- ⬜ CarPlay scene + templates.
-- ⬜ Playlist editing + "Save to Library" button.
+- ✅ `App/` — full SwiftUI app (XcodeGen `project.yml`): Home, Library
+  (Songs/Albums/Artists/Playlists), Favorites, Search (with YouTube + Save),
+  Settings; full-screen vinyl player (spinning record, scrubber, shuffle/repeat,
+  favorite, lyrics, queue, sleep timer); per-song menu (play next / add to queue
+  / favorite / add to playlist); Liquid Glass icon-only tab bar; pull-to-refresh.
+- ⬜ CarPlay scene + templates (needs Apple `carplay-audio` entitlement).
+- ⬜ Offline downloads (v2).
 
 ## Layout
 

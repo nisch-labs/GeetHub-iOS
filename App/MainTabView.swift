@@ -5,6 +5,7 @@ import GeetHubKit
 struct MainTabView: View {
     @Environment(Session.self) private var session
     @State private var player: PlayerEngine?
+    @State private var picker = PlaylistPicker()
     @State private var showPlayer = false
     @State private var selectedTab = 0
 
@@ -24,8 +25,14 @@ struct MainTabView: View {
                         .padding(.bottom, 64)   // float above the glass bar
                 }
                 .environment(player)
+                .environment(picker)
                 .tint(Theme.teal)
-                .fullScreenCover(isPresented: $showPlayer) { FullPlayerView().environment(player) }
+                .fullScreenCover(isPresented: $showPlayer) {
+                    FullPlayerView().environment(player).environment(picker)
+                }
+                .sheet(item: $picker.song) { song in
+                    AddToPlaylistSheet(song: song)
+                }
                 .task { await demoIfRequested(player) }
             } else {
                 ProgressView().paperBackground()

@@ -11,27 +11,41 @@ struct NowPlayingBar: View {
     var body: some View {
         if let song = player.current {
             Button(action: onTap) {
-                HStack(spacing: 10) {
-                    ArtworkImage(coverArt: song.coverArt, size: 38, shape: .sleeve)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(song.title).retro(13, .medium).lineLimit(1)
-                        Text(song.artist ?? "").retro(9, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
+                VStack(spacing: 0) {
+                    miniProgress
+                    HStack(spacing: 10) {
+                        ArtworkImage(coverArt: song.coverArt, size: 38, shape: .sleeve, corner: 8)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(song.title).retro(13, .medium).lineLimit(1)
+                            Text(song.artist ?? "").retro(9, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
+                        }
+                        Spacer()
+                        Button { player.togglePlayPause() } label: {
+                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.title3).foregroundStyle(Theme.teal)
+                        }.buttonStyle(.plain)
+                        Button { player.next() } label: {
+                            Image(systemName: "forward.end").font(.body).foregroundStyle(Theme.ink)
+                        }.buttonStyle(.plain).padding(.leading, 4)
                     }
-                    Spacer()
-                    Button { player.togglePlayPause() } label: {
-                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.title3).foregroundStyle(Theme.teal)
-                    }.buttonStyle(.plain)
-                    Button { player.next() } label: {
-                        Image(systemName: "forward.end").font(.body).foregroundStyle(Theme.ink)
-                    }.buttonStyle(.plain).padding(.leading, 4)
+                    .padding(.horizontal, 14).padding(.vertical, 9)
                 }
-                .padding(.horizontal, 14).padding(.vertical, 9)
                 .background(Theme.surface)
                 .overlay(Rectangle().fill(Theme.hairline).frame(height: 1), alignment: .top)
             }
             .buttonStyle(.plain)
         }
+    }
+
+    private var miniProgress: some View {
+        GeometryReader { geo in
+            let frac = player.duration > 0 ? min(max(player.currentTime / player.duration, 0), 1) : 0
+            ZStack(alignment: .leading) {
+                Rectangle().fill(Theme.hairline)
+                Rectangle().fill(Theme.teal).frame(width: geo.size.width * frac)
+            }
+        }
+        .frame(height: 2)
     }
 }
 
@@ -39,8 +53,11 @@ struct NowPlayingBar: View {
 
 struct FullPlayerView: View {
     @Environment(PlayerEngine.self) private var player
+    @Environment(PlaylistPicker.self) private var picker
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showLyrics = false
+    @State private var showQueue = false
 
     private var progress: Double {
         guard player.duration > 0 else { return 0 }
@@ -59,11 +76,13 @@ struct FullPlayerView: View {
             transport
         }
         .paperBackground()
+        .sheet(isPresented: $showLyrics) { LyricsView().environment(player) }
+        .sheet(isPresented: $showQueue) { QueueView().environment(player) }
     }
 
-    // Header: back · album · favorite
+    // Header: back · album · favorite · menu
     private var header: some View {
-        HStack {
+        HStack(spacing: 16) {
             Button { dismiss() } label: {
                 Image(systemName: "chevron.down").font(.headline)
             }
@@ -75,6 +94,19 @@ struct FullPlayerView: View {
                 Image(systemName: player.isCurrentFavorite ? "heart.fill" : "heart")
                     .font(.headline)
                     .foregroundStyle(player.isCurrentFavorite ? Theme.teal : Theme.ink)
+            }
+            Menu {
+                if let song = player.current {
+                    Button { picker.pick(song) } label: { Label("Add to playlist…", systemImage: "plus") }
+                }
+                Menu {
+                    Button("Off") { player.setSleep(minutes: nil) }
+                    Button("15 minutes") { player.setSleep(minutes: 15) }
+                    Button("30 minutes") { player.setSleep(minutes: 30) }
+                    Button("1 hour") { player.setSleep(minutes: 60) }
+                } label: { Label(player.isSleepArmed ? "Sleep timer · on" : "Sleep timer", systemImage: "moon.zzz") }
+            } label: {
+                Image(systemName: "ellipsis").font(.headline)
             }
         }
         .foregroundStyle(Theme.ink)
@@ -169,22 +201,30 @@ struct FullPlayerView: View {
         .padding(.bottom, 16)
     }
 
-    // Shuffle · repeat
+    // Shuffle · lyrics · queue · repeat
     private var secondaryControls: some View {
         HStack {
-            Button { player.toggleShuffle() } label: {
-                Image(systemName: "shuffle")
-                    .foregroundStyle(player.isShuffled ? Theme.teal : Theme.graphite)
-            }
+            iconButton("shuffle", active: player.isShuffled) { player.toggleShuffle() }
             Spacer()
-            Button { player.cycleRepeat() } label: {
-                Image(systemName: repeatSymbol)
-                    .foregroundStyle(player.repeatMode == .off ? Theme.graphite : Theme.teal)
-            }
+            iconButton("text.quote", active: false) { showLyrics = true }
+            Spacer()
+            iconButton("list.bullet", active: false) { showQueue = true }
+            Spacer()
+            iconButton(repeatSymbol, active: player.repeatMode != .off) { player.cycleRepeat() }
         }
-        .font(.system(size: 17))
-        .padding(.horizontal, 40)
+        .padding(.horizontal, 36)
         .padding(.bottom, 14)
+    }
+
+    private func iconButton(_ symbol: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 17))
+                .foregroundStyle(active ? Theme.teal : Theme.graphite)
+                .frame(width: 44, height: 36)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var repeatSymbol: String {

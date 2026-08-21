@@ -27,6 +27,7 @@ public struct SubsonicResponse: Decodable, Sendable {
     public let genres: Genres?
     public let songsByGenre: SongsByGenre?
     public let artist: ArtistWithAlbums?
+    public let lyricsList: LyricsList?
 
     public var isOK: Bool { status == "ok" }
 }
@@ -161,6 +162,21 @@ public struct ArtistWithAlbums: Decodable, Sendable, Identifiable {
     public let id: String
     public let name: String
     public let album: [Album]?
+}
+
+public struct LyricsList: Decodable, Sendable {
+    public let structuredLyrics: [StructuredLyrics]?
+}
+
+public struct StructuredLyrics: Decodable, Sendable {
+    public let synced: Bool?
+    public let line: [LyricLine]?
+}
+
+public struct LyricLine: Decodable, Sendable, Identifiable, Hashable {
+    public let start: Int?     // milliseconds (synced lyrics)
+    public let value: String
+    public var id: String { "\(start ?? -1)-\(value)" }
 }
 
 public struct PlaylistWithSongs: Decodable, Sendable, Identifiable {

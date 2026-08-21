@@ -33,6 +33,7 @@ struct HomeView: View {
             .paperBackground()
             .navigationBarHidden(true)
             .navigationDestination(for: Album.self) { AlbumDetailView(album: $0) }
+            .refreshable { await load() }
             .overlay { if isLoading { ProgressView() } }
         }
         .task { await load() }
@@ -101,7 +102,7 @@ struct HomeView: View {
 
     private var featuredSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Curated for you", trailing: "See all")
+            SectionHeader(title: "Curated for you")
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     FeaturedCard(title: "Discover", subtitle: "A fresh shuffle from your whole library",
@@ -121,7 +122,7 @@ struct HomeView: View {
             mixes
         } else {
             VStack(alignment: .leading, spacing: 16) {
-                SectionHeader(title: listTitle, trailing: "See all")
+                SectionHeaderLink(title: listTitle) { AlbumGridScreen(title: listTitle, albums: listAlbums) }
                 LazyVStack(spacing: 16) {
                     ForEach(listAlbums.prefix(8)) { album in
                         AlbumRow(album: album) { Task { await playAlbum(album) } }

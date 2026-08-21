@@ -117,6 +117,16 @@ public struct SubsonicClient: Sendable {
         try await send("getPlaylists.view").playlists?.playlist ?? []
     }
 
+    public func createPlaylist(name: String) async throws -> PlaylistWithSongs? {
+        try await send("createPlaylist.view", [.init(name: "name", value: name)]).playlist
+    }
+
+    /// Structured lyrics (synced if the server has them; else plain lines).
+    public func lyrics(id: String) async throws -> [LyricLine] {
+        try await send("getLyricsBySongId.view", [.init(name: "id", value: id)])
+            .lyricsList?.structuredLyrics?.first?.line ?? []
+    }
+
     public func playlist(id: String) async throws -> PlaylistWithSongs? {
         try await send("getPlaylist.view", [.init(name: "id", value: id)]).playlist
     }

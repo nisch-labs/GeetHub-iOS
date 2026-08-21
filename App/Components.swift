@@ -68,7 +68,8 @@ struct Chip: View {
     }
 }
 
-/// A plain tappable list of songs that plays on tap.
+/// A plain tappable list of songs — tap to play, "•••" for actions, long-press
+/// for the same menu.
 struct SongList: View {
     let songs: [Song]
     @Environment(PlayerEngine.self) private var player
@@ -76,12 +77,17 @@ struct SongList: View {
     var body: some View {
         LazyVStack(spacing: 0) {
             ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                Button { player.play(songs, startAt: index) } label: {
-                    SongRow(song: song, isPlaying: player.current?.id == song.id)
-                        .padding(.horizontal, 20).padding(.vertical, 10)
-                        .contentShape(Rectangle())
+                HStack(spacing: 0) {
+                    Button { player.play(songs, startAt: index) } label: {
+                        SongRow(song: song, isPlaying: player.current?.id == song.id,
+                                favorited: player.isFavorite(song))
+                            .padding(.leading, 20).padding(.vertical, 10)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .songContextMenu(song)
+                    SongMenuButton(song: song).padding(.trailing, 12)
                 }
-                .buttonStyle(.plain)
                 Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 76)
             }
         }

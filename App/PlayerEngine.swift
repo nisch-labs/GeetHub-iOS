@@ -27,17 +27,56 @@ final class PlayerEngine {
         }
     }
 
-    // Favorites (optimistic; persisted to the server).
+    // Favorites (optimistic; persisted to the server) — works for any song.
     private var favoriteOverride: [String: Bool] = [:]
-    var isCurrentFavorite: Bool {
-        guard let s = current else { return false }
-        return favoriteOverride[s.id] ?? s.isFavorite
+    func isFavorite(_ song: Song) -> Bool { favoriteOverride[song.id] ?? song.isFavorite }
+    func setFavorite(_ song: Song) {
+        let newValue = !isFavorite(song)
+        favoriteOverride[song.id] = newValue
+        Task { try? await (newValue ? client.star(id: song.id) : client.unstar(id: song.id)) }
     }
-    func toggleFavorite() {
-        guard let s = current else { return }
-        let newValue = !isCurrentFavorite
-        favoriteOverride[s.id] = newValue
-        Task { try? await (newValue ? client.star(id: s.id) : client.unstar(id: s.id)) }
+    var isCurrentFavorite: Bool { current.map(isFavorite) ?? false }
+    func toggleFavorite() { if let s = current { setFavorite(s) } }
+
+    // Queue editing / Up Next.
+    var upNext: [Song] { queue.upNext }
+    func enqueueNext(_ song: Song) {
+        let wasEmpty = current == nil
+        queue.playNext(song)
+        if wasEmpty { startCurrent() }
+    }
+    func enqueueLast(_ song: Song) {
+        let wasEmpty = current == nil
+        queue.append(song)
+        if wasEmpty { startCurrent() }
+    }
+    func playUpNext(_ index: Int) {
+        let target = (queue.position ?? -1) + 1 + index
+        queue.jump(to: target)
+        startCurrent()
+    }
+    func removeUpNext(_ index: Int) {
+        let target = (queue.position ?? -1) + 1 + index
+        queue.remove(atOrderPosition: target)
+    }
+
+    // Sleep timer.
+    private(set) var sleepEndsAt: Date?
+    private var sleepTask: Task<Void, Never>?
+    var isSleepArmed: Bool { sleepEndsAt != nil }
+    func setSleep(minutes: Int?) {
+        sleepTask?.cancel()
+        guard let minutes else { sleepEndsAt = nil; return }
+        sleepEndsAt = Date().addingTimeInterval(Double(minutes * 60))
+        sleepTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Double(minutes * 60)))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self else { return }
+                if self.isPlaying { self.togglePlayPause() }
+                self.sleepEndsAt = nil
+            }
+        }
     }
 
     let client: SubsonicClient

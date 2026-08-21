@@ -48,6 +48,7 @@ struct FavoritesView: View {
             .paperBackground()
             .navigationBarHidden(true)
             .navigationDestination(for: Album.self) { AlbumDetailView(album: $0) }
+            .refreshable { await load() }
             .overlay { if isLoading { ProgressView() } }
         }
         .task { await load() }

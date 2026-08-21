@@ -5,6 +5,7 @@ import GeetHubKit
 struct SongRow: View {
     let song: Song
     var isPlaying: Bool = false
+    var favorited: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -20,6 +21,9 @@ struct SongRow: View {
                     .retro(11, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
             }
             Spacer(minLength: 8)
+            if favorited {
+                Image(systemName: "heart.fill").font(.caption2).foregroundStyle(Theme.teal)
+            }
             if song.isYouTube {
                 Text("YouTube")
                     .retro(9, .semibold, color: Theme.teal, tracking: 1.5)

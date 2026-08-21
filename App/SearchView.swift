@@ -17,13 +17,18 @@ struct SearchView: View {
         NavigationStack {
             List {
                 ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                    HStack(spacing: 8) {
+                    HStack(spacing: 4) {
                         Button { player.play(songs, startAt: index) } label: {
-                            SongRow(song: song, isPlaying: player.current?.id == song.id)
+                            SongRow(song: song, isPlaying: player.current?.id == song.id,
+                                    favorited: !song.isYouTube && player.isFavorite(song))
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        if song.isYouTube { saveButton(for: song) }
+                        if song.isYouTube {
+                            saveButton(for: song)
+                        } else {
+                            SongMenuButton(song: song)
+                        }
                     }
                     .listRowBackground(Theme.surface)
                     .listRowSeparatorTint(Theme.hairline)
