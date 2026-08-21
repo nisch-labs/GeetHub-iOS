@@ -10,32 +10,24 @@ struct RootView: View {
     var body: some View {
         Group {
             if session.isConnected {
-                // TODO: LibraryView() — browse / search / now-playing (next up).
-                ConnectedPlaceholderView()
+                MainTabView()
             } else {
                 LoginView()
             }
         }
-        .task { session.restore() }
+        .task { await start() }
     }
-}
 
-/// Temporary stand-in until the library UI is built.
-private struct ConnectedPlaceholderView: View {
-    @Environment(Session.self) private var session
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.green)
-            Text("Connected 🎵").font(.title2.bold())
-            if let host = session.client?.credentials.baseURL.host {
-                Text(host).foregroundStyle(.secondary)
-            }
-            Button("Sign out", role: .destructive) { session.signOut() }
-                .buttonStyle(.bordered)
+    private func start() async {
+        session.restore()
+        #if DEBUG
+        // Convenience for simulator runs: auto-connect from launch env vars
+        // (SIMCTL_CHILD_GEETHUB_URL / _USER / _PASS). Never used in release.
+        let env = ProcessInfo.processInfo.environment
+        if !session.isConnected,
+           let url = env["GEETHUB_URL"], let u = env["GEETHUB_USER"], let p = env["GEETHUB_PASS"] {
+            await session.connect(urlString: url, username: u, password: p)
         }
-        .padding()
+        #endif
     }
 }

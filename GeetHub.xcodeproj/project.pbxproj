@@ -7,18 +7,34 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05B06B94E81147FBD6970035 /* NowPlaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B249889E11E401461C26D75 /* NowPlaying.swift */; };
+		14500C2E42F39080634EA4D5 /* AlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4D4914D4CC72DFBCDE8275B /* AlbumDetailView.swift */; };
 		268D8B2F2C88A3DB2112870A /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB6336EB46E454A3079DE6B /* LoginView.swift */; };
+		34DF472E6688008C5E86A33F /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3494DA7578AC8450113EC8 /* MainTabView.swift */; };
+		402E5D26FA3F5644326D92B1 /* ArtworkImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A691BD922302A301ED876063 /* ArtworkImage.swift */; };
+		7CFD7ADA83F61236234A5818 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51D52ED5DA57A65425ED9950 /* SearchView.swift */; };
 		7E8FD766DAE5DDDCE2A453CD /* GeetHubApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C58B8F66B18F08305D87D3F6 /* GeetHubApp.swift */; };
 		84B5CEC6C553DE421C11C7E3 /* GeetHubKit in Frameworks */ = {isa = PBXBuildFile; productRef = B29BCD66DF2AD5E2AEFCC065 /* GeetHubKit */; };
+		C34AA179F3E85195F520A012 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCFB1AAF3672E8264D703B02 /* LibraryView.swift */; };
+		C46BAA616311DF4A9BB092FF /* Rows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27110212F9155543B4E96950 /* Rows.swift */; };
 		E8F3BE8DC5A7FA43D03776E5 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 392AC81AA29B333654DECC45 /* RootView.swift */; };
+		F4C91E53637FD9214DBDDFE8 /* PlayerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B759ABEB2F83899AB6B2ABCE /* PlayerEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1B249889E11E401461C26D75 /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
+		27110212F9155543B4E96950 /* Rows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rows.swift; sourceTree = "<group>"; };
 		392AC81AA29B333654DECC45 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		51D52ED5DA57A65425ED9950 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		5B3494DA7578AC8450113EC8 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		943255F06891643542D9B085 /* GeetHub.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GeetHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A92BE3100C993D14DC2A80A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A4D4914D4CC72DFBCDE8275B /* AlbumDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumDetailView.swift; sourceTree = "<group>"; };
+		A691BD922302A301ED876063 /* ArtworkImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkImage.swift; sourceTree = "<group>"; };
+		B759ABEB2F83899AB6B2ABCE /* PlayerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerEngine.swift; sourceTree = "<group>"; };
 		C58B8F66B18F08305D87D3F6 /* GeetHubApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeetHubApp.swift; sourceTree = "<group>"; };
 		E1D6956BE3860F96F2216A15 /* GeetHubKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GeetHubKit; path = GeetHubKit; sourceTree = SOURCE_ROOT; };
+		FCFB1AAF3672E8264D703B02 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		FEB6336EB46E454A3079DE6B /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -54,10 +70,18 @@
 		6E7C98374E85917BBF0C2D8B /* App */ = {
 			isa = PBXGroup;
 			children = (
+				A4D4914D4CC72DFBCDE8275B /* AlbumDetailView.swift */,
+				A691BD922302A301ED876063 /* ArtworkImage.swift */,
 				C58B8F66B18F08305D87D3F6 /* GeetHubApp.swift */,
 				9A92BE3100C993D14DC2A80A /* Info.plist */,
+				FCFB1AAF3672E8264D703B02 /* LibraryView.swift */,
 				FEB6336EB46E454A3079DE6B /* LoginView.swift */,
+				5B3494DA7578AC8450113EC8 /* MainTabView.swift */,
+				1B249889E11E401461C26D75 /* NowPlaying.swift */,
+				B759ABEB2F83899AB6B2ABCE /* PlayerEngine.swift */,
 				392AC81AA29B333654DECC45 /* RootView.swift */,
+				27110212F9155543B4E96950 /* Rows.swift */,
+				51D52ED5DA57A65425ED9950 /* SearchView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -130,9 +154,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				14500C2E42F39080634EA4D5 /* AlbumDetailView.swift in Sources */,
+				402E5D26FA3F5644326D92B1 /* ArtworkImage.swift in Sources */,
 				7E8FD766DAE5DDDCE2A453CD /* GeetHubApp.swift in Sources */,
+				C34AA179F3E85195F520A012 /* LibraryView.swift in Sources */,
 				268D8B2F2C88A3DB2112870A /* LoginView.swift in Sources */,
+				34DF472E6688008C5E86A33F /* MainTabView.swift in Sources */,
+				05B06B94E81147FBD6970035 /* NowPlaying.swift in Sources */,
+				F4C91E53637FD9214DBDDFE8 /* PlayerEngine.swift in Sources */,
 				E8F3BE8DC5A7FA43D03776E5 /* RootView.swift in Sources */,
+				C46BAA616311DF4A9BB092FF /* Rows.swift in Sources */,
+				7CFD7ADA83F61236234A5818 /* SearchView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

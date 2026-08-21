@@ -22,6 +22,8 @@ targets:
       properties:
         CFBundleDisplayName: Geet-Hub
         UILaunchScreen: {}
+        UIBackgroundModes:
+          - audio
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         # Self-hosted servers may be plain http (Tailscale/LAN); allow it.
