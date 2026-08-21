@@ -13,23 +13,20 @@ struct MainTabView: View {
             if let player {
                 ZStack(alignment: .bottom) {
                     TabView(selection: $selectedTab) {
-                        HomeView()
-                            .tabItem { Label("Home", systemImage: "house") }.tag(0)
-                        LibraryView()
-                            .tabItem { Label("Library", systemImage: "square.stack") }.tag(1)
-                        FavoritesView()
-                            .tabItem { Label("Favorites", systemImage: "heart") }.tag(2)
-                        SearchView()
-                            .tabItem { Label("Search", systemImage: "magnifyingglass") }.tag(3)
-                        SettingsView()
-                            .tabItem { Label("Settings", systemImage: "gearshape") }.tag(4)
+                        HomeView().tag(0).toolbar(.hidden, for: .tabBar)
+                        LibraryView().tag(1).toolbar(.hidden, for: .tabBar)
+                        FavoritesView().tag(2).toolbar(.hidden, for: .tabBar)
+                        SearchView().tag(3).toolbar(.hidden, for: .tabBar)
+                        SettingsView().tag(4).toolbar(.hidden, for: .tabBar)
                     }
-                    NowPlayingBar(onTap: { showPlayer = true })
-                        .padding(.bottom, 50)   // sit just above the tab bar
+                    VStack(spacing: 0) {
+                        NowPlayingBar(onTap: { showPlayer = true })
+                        CustomTabBar(selection: $selectedTab)
+                    }
                 }
                 .environment(player)
                 .tint(Theme.teal)
-                .sheet(isPresented: $showPlayer) { FullPlayerView().environment(player) }
+                .fullScreenCover(isPresented: $showPlayer) { FullPlayerView().environment(player) }
                 .task { await demoIfRequested(player) }
             } else {
                 ProgressView().paperBackground()
@@ -56,6 +53,32 @@ struct MainTabView: View {
             showPlayer = true
         }
         #endif
+    }
+}
+
+/// Minimal icon-only bottom bar — small icons, no labels.
+struct CustomTabBar: View {
+    @Binding var selection: Int
+    private let items = ["house", "square.stack", "heart", "magnifyingglass", "gearshape"]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.offset) { index, icon in
+                Button { selection = index } label: {
+                    Image(systemName: icon)
+                        .font(.system(size: 19))
+                        .foregroundStyle(selection == index ? Theme.teal : Theme.graphite)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 30)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 10)
+        .padding(.bottom, 4)
+        .background(Theme.surface.ignoresSafeArea(edges: .bottom))
+        .overlay(Rectangle().fill(Theme.hairline).frame(height: 1), alignment: .top)
     }
 }
 

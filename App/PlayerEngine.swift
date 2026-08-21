@@ -15,6 +15,31 @@ final class PlayerEngine {
     var current: Song? { queue.current }
     var hasTrack: Bool { queue.current != nil }
 
+    // Shuffle / repeat (delegated to the queue).
+    var isShuffled: Bool { queue.isShuffled }
+    var repeatMode: PlaybackQueue.RepeatMode { queue.repeatMode }
+    func toggleShuffle() { queue.toggleShuffle() }
+    func cycleRepeat() {
+        switch queue.repeatMode {
+        case .off: queue.repeatMode = .all
+        case .all: queue.repeatMode = .one
+        case .one: queue.repeatMode = .off
+        }
+    }
+
+    // Favorites (optimistic; persisted to the server).
+    private var favoriteOverride: [String: Bool] = [:]
+    var isCurrentFavorite: Bool {
+        guard let s = current else { return false }
+        return favoriteOverride[s.id] ?? s.isFavorite
+    }
+    func toggleFavorite() {
+        guard let s = current else { return }
+        let newValue = !isCurrentFavorite
+        favoriteOverride[s.id] = newValue
+        Task { try? await (newValue ? client.star(id: s.id) : client.unstar(id: s.id)) }
+    }
+
     let client: SubsonicClient
     private let player = AVPlayer()
     private var timeObserver: Any?

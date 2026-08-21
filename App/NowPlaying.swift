@@ -50,26 +50,32 @@ struct FullPlayerView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Spacer()
+            Spacer(minLength: 8)
             record
-            Spacer()
+            Spacer(minLength: 8)
             trackInfo
+            scrubber
+            secondaryControls
             transport
         }
         .paperBackground()
     }
 
-    // Header: back · album · more
+    // Header: back · album · favorite
     private var header: some View {
         HStack {
             Button { dismiss() } label: {
-                Image(systemName: "chevron.left").font(.headline)
+                Image(systemName: "chevron.down").font(.headline)
             }
             Spacer()
             Text(player.current?.album ?? "Now Playing")
                 .retro(13, .medium, tracking: 3).lineLimit(1)
             Spacer()
-            Image(systemName: "ellipsis").font(.headline)
+            Button { player.toggleFavorite() } label: {
+                Image(systemName: player.isCurrentFavorite ? "heart.fill" : "heart")
+                    .font(.headline)
+                    .foregroundStyle(player.isCurrentFavorite ? Theme.teal : Theme.ink)
+            }
         }
         .foregroundStyle(Theme.ink)
         .padding(.horizontal, 24)
@@ -79,7 +85,7 @@ struct FullPlayerView: View {
     // The record: a pressed vinyl — art as label, grooves + rim, spins while
     // playing — wrapped by the teal tonearm arc (which does NOT spin: it's time).
     private var record: some View {
-        let art: CGFloat = 288
+        let art: CGFloat = 264
         let ring: CGFloat = art + 22
         let ringRadius = ring / 2
         return ZStack {
@@ -135,24 +141,57 @@ struct FullPlayerView: View {
         }
     }
 
-    // Title + elapsed time, then artist
+    // Title, then artist
     private var trackInfo: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(player.current?.title ?? "—").retro(26, .semibold, tracking: 1).lineLimit(1)
-                Spacer(minLength: 12)
-                Text(SongRow.time(Int(player.currentTime)))
-                    .font(.system(size: 20, design: .monospaced))
-                    .foregroundStyle(Theme.ink)
-            }
+        VStack(alignment: .leading, spacing: 5) {
+            Text(player.current?.title ?? "—").retro(24, .semibold, tracking: 1).lineLimit(1)
             Text(player.current?.artist ?? "")
-                .retro(13, .regular, color: Theme.graphite, tracking: 2).lineLimit(1)
+                .retro(12, .regular, color: Theme.graphite, tracking: 2).lineLimit(1)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 28)
-        .padding(.bottom, 20)
+        .padding(.bottom, 14)
     }
 
-    // Hairline-divided transport cells
+    // Draggable scrubber + elapsed / remaining
+    private var scrubber: some View {
+        VStack(spacing: 6) {
+            Scrubber(current: player.currentTime, duration: player.duration) { player.seek(to: $0) }
+            HStack {
+                Text(SongRow.time(Int(player.currentTime)))
+                Spacer()
+                Text("-" + SongRow.time(Int(max(player.duration - player.currentTime, 0))))
+            }
+            .font(.system(size: 12, design: .monospaced))
+            .foregroundStyle(Theme.graphite)
+        }
+        .padding(.horizontal, 28)
+        .padding(.bottom, 16)
+    }
+
+    // Shuffle · repeat
+    private var secondaryControls: some View {
+        HStack {
+            Button { player.toggleShuffle() } label: {
+                Image(systemName: "shuffle")
+                    .foregroundStyle(player.isShuffled ? Theme.teal : Theme.graphite)
+            }
+            Spacer()
+            Button { player.cycleRepeat() } label: {
+                Image(systemName: repeatSymbol)
+                    .foregroundStyle(player.repeatMode == .off ? Theme.graphite : Theme.teal)
+            }
+        }
+        .font(.system(size: 17))
+        .padding(.horizontal, 40)
+        .padding(.bottom, 14)
+    }
+
+    private var repeatSymbol: String {
+        player.repeatMode == .one ? "repeat.1" : "repeat"
+    }
+
+    // Hairline-divided transport — whole cell is the button (cassette feel)
     private var transport: some View {
         VStack(spacing: 0) {
             Rectangle().fill(Theme.hairline).frame(height: 1)
@@ -163,7 +202,7 @@ struct FullPlayerView: View {
                 divider
                 transportButton("forward.end", tint: Theme.ink) { player.next() }
             }
-            .frame(height: 116)
+            .frame(height: 108)
         }
     }
 
@@ -174,11 +213,56 @@ struct FullPlayerView: View {
     private func transportButton(_ symbol: String, tint: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 24, weight: .regular))
+                .font(.system(size: 26, weight: .regular))
                 .foregroundStyle(tint)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CassetteButtonStyle())
+    }
+}
+
+/// The whole cell is tappable and depresses like a physical transport key.
+struct CassetteButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(configuration.isPressed ? Theme.teal.opacity(0.12) : Color.clear)
+            .contentShape(Rectangle())
+    }
+}
+
+/// Minimal draggable seek bar.
+struct Scrubber: View {
+    let current: Double
+    let duration: Double
+    let onSeek: (Double) -> Void
+    @State private var dragValue: Double? = nil
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width
+            let value = dragValue ?? current
+            let fraction = duration > 0 ? min(max(value / duration, 0), 1) : 0
+            ZStack(alignment: .leading) {
+                Capsule().fill(Theme.hairline).frame(height: 3)
+                Capsule().fill(Theme.teal).frame(width: width * fraction, height: 3)
+                Circle().fill(Theme.teal).frame(width: 14, height: 14)
+                    .offset(x: width * fraction - 7)
+            }
+            .frame(height: 20)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { v in
+                        let x = min(max(0, v.location.x), width)
+                        dragValue = duration * Double(x / width)
+                    }
+                    .onEnded { v in
+                        let x = min(max(0, v.location.x), width)
+                        onSeek(duration * Double(x / width))
+                        dragValue = nil
+                    }
+            )
+        }
+        .frame(height: 20)
     }
 }
