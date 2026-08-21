@@ -38,6 +38,15 @@ final class PlayerEngine {
     var isCurrentFavorite: Bool { current.map(isFavorite) ?? false }
     func toggleFavorite() { if let s = current { setFavorite(s) } }
 
+    // Save a YouTube track into the real library (via the proxy).
+    private(set) var savedYouTube: Set<String> = []
+    var isCurrentSaved: Bool { current.map { savedYouTube.contains($0.id) } ?? false }
+    func saveCurrentToLibrary() {
+        guard let s = current, s.isYouTube, !savedYouTube.contains(s.id) else { return }
+        savedYouTube.insert(s.id)
+        Task { try? await client.saveToLibrary(youtubeId: s.id) }
+    }
+
     // Queue editing / Up Next.
     var upNext: [Song] { queue.upNext }
     func enqueueNext(_ song: Song) {

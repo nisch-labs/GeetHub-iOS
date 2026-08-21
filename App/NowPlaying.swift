@@ -79,10 +79,18 @@ struct FullPlayerView: View {
             Text(player.current?.album ?? "Now Playing")
                 .retro(13, .medium, tracking: 3).lineLimit(1)
             Spacer()
-            Button { player.toggleFavorite() } label: {
-                Image(systemName: player.isCurrentFavorite ? "heart.fill" : "heart")
-                    .font(.headline)
-                    .foregroundStyle(player.isCurrentFavorite ? Theme.accent : Theme.ink)
+            if player.current?.isYouTube == true {
+                Button { player.saveCurrentToLibrary() } label: {
+                    Image(systemName: player.isCurrentSaved ? "checkmark.circle.fill" : "arrow.down.circle")
+                        .font(.headline)
+                        .foregroundStyle(player.isCurrentSaved ? Theme.accent : Theme.ink)
+                }
+            } else {
+                Button { player.toggleFavorite() } label: {
+                    Image(systemName: player.isCurrentFavorite ? "heart.fill" : "heart")
+                        .font(.headline)
+                        .foregroundStyle(player.isCurrentFavorite ? Theme.accent : Theme.ink)
+                }
             }
             Menu {
                 if let song = player.current {
@@ -108,19 +116,12 @@ struct FullPlayerView: View {
     private var record: some View {
         let art: CGFloat = 264
         let ring: CGFloat = art + 22
-        let ringRadius = ring / 2
         return ZStack {
-            // Progress arc + knob (static — represents elapsed time)
+            // Progress arc (represents elapsed time)
             Circle().trim(from: 0, to: progress)
                 .stroke(Theme.accent, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .frame(width: ring, height: ring)
-            Circle().fill(Theme.accent)
-                .frame(width: 16, height: 16)
-                .overlay(Circle().fill(Theme.surface).frame(width: 6, height: 6))
-                .offset(y: -ringRadius)
-                .rotationEffect(.degrees(360 * progress))
-                .opacity(progress > 0.001 ? 1 : 0)
 
             // The spinning disc
             TimelineView(.animation(paused: !player.isPlaying || reduceMotion)) { timeline in

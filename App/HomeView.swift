@@ -49,7 +49,7 @@ struct HomeView: View {
                 Text(session.client?.credentials.username ?? "friend").retro(15, .semibold, tracking: 1)
             }
             Spacer()
-            roundButton("heart") { onSelectTab(2) }
+            roundButton("magnifyingglass") { onSelectTab(3) }
             roundButton("gearshape") { onSelectTab(4) }
         }
         .padding(.horizontal, 20)
@@ -82,7 +82,7 @@ struct HomeView: View {
             SectionHeader(title: "Curated for you")
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    CompactCard(title: "Discover", subtitle: "A fresh shuffle", filled: true, icon: "shuffle") {
+                    CompactCard(title: "Discover", subtitle: "A fresh shuffle", filled: false, icon: "shuffle") {
                         Task { await shuffleAll() }
                     }
                     CompactCard(title: "Rediscover", subtitle: "A random album", filled: false, icon: "opticaldisc") {
