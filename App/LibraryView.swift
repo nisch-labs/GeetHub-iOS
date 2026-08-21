@@ -12,7 +12,7 @@ enum SongSort: String, CaseIterable {
 
 struct LibraryView: View {
     @Environment(Session.self) private var session
-    @State private var tab = 1   // default: Albums
+    @State private var tab = 0   // default: Songs
     @State private var songSort: SongSort = .title
 
     @State private var songs: [Song] = []
@@ -58,7 +58,7 @@ struct LibraryView: View {
             .navigationDestination(for: Artist.self) { ArtistDetailView(artist: $0) }
             .navigationDestination(for: Playlist.self) { PlaylistDetailView(playlist: $0) }
         }
-        .task { await loadTop() }
+        .task { await loadTop(); if tab == 0 { await loadSongs() } }
         .task {
             #if DEBUG
             if let t = ProcessInfo.processInfo.environment["GEETHUB_LIBTAB"], let i = Int(t) {

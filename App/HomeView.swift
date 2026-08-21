@@ -1,5 +1,5 @@
-// App-target file. Home — the reference layout (greeting, headline, chips,
-// featured carousel, list with inline play), rounded + spaced, in our palette.
+// App-target file. Home — greeting, compact curated cards, then Recently Played,
+// Favourites, Recently Added, and Most Listened sections.
 import SwiftUI
 import GeetHubKit
 
@@ -11,20 +11,19 @@ struct HomeView: View {
     @State private var newest: [Album] = []
     @State private var frequent: [Album] = []
     @State private var recent: [Album] = []
-    @State private var genres: [Genre] = []
-    @State private var filter = 0
+    @State private var favorites: [Song] = []
     @State private var isLoading = true
-
-    private let filters = ["All", "Recently Added", "Most Played", "Mixes"]
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 32) {
+                VStack(alignment: .leading, spacing: 30) {
                     header
-                    chips
-                    featuredSection
-                    listSection
+                    curated
+                    if !recent.isEmpty { albumGridSection("Recently Played", recent) }
+                    if !favorites.isEmpty { favouritesSection }
+                    if !newest.isEmpty { albumGridSection("Recently Added", newest) }
+                    if !frequent.isEmpty { mostListenedSection }
                 }
                 .padding(.top, 12)
                 .padding(.bottom, 140)
@@ -76,48 +75,54 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Chips
+    // MARK: - Curated (compact cards)
 
-    private var chips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(Array(filters.enumerated()), id: \.offset) { index, title in
-                    Button { filter = index } label: { Chip(title: title, filled: filter == index) }
-                        .buttonStyle(.plain)
+    private var curated: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Curated for you")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    CompactCard(title: "Discover", subtitle: "A fresh shuffle", filled: true, icon: "shuffle") {
+                        Task { await shuffleAll() }
+                    }
+                    CompactCard(title: "Rediscover", subtitle: "A random album", filled: false, icon: "opticaldisc") {
+                        Task { await playRandomAlbum() }
+                    }
                 }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    // MARK: - Album grid section (Recently Played / Recently Added)
+
+    private func albumGridSection(_ title: String, _ albums: [Album]) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeaderLink(title: title) { AlbumGridScreen(title: title, albums: albums) }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                ForEach(albums.prefix(4)) { AlbumMiniCard(album: $0) }
             }
             .padding(.horizontal, 20)
         }
     }
 
-    // MARK: - Featured carousel
+    // MARK: - Favourites (horizontal play cards)
 
-    private var featuredSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Curated for you")
+    private var favouritesSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeaderLink(title: "Favourites") { SongsScreen(title: "Favourites", songs: favorites) }
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    FeaturedCard(title: "Discover", subtitle: "A fresh shuffle from your whole library",
-                                 filled: true, icon: "shuffle") { Task { await shuffleAll() } }
-                    FeaturedCard(title: "Rediscover", subtitle: "A random album, start to finish",
-                                 filled: false, icon: "opticaldisc") { Task { await playRandomAlbum() } }
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-    }
-
-    // MARK: - List section (chip-driven)
-
-    @ViewBuilder private var listSection: some View {
-        if filter == 3 {
-            mixes
-        } else {
-            VStack(alignment: .leading, spacing: 16) {
-                SectionHeaderLink(title: listTitle) { AlbumGridScreen(title: listTitle, albums: listAlbums) }
-                LazyVStack(spacing: 16) {
-                    ForEach(listAlbums.prefix(8)) { album in
-                        AlbumRow(album: album) { Task { await playAlbum(album) } }
+                HStack(alignment: .top, spacing: 16) {
+                    ForEach(Array(favorites.prefix(10).enumerated()), id: \.element.id) { index, song in
+                        Button { player.play(favorites, startAt: index) } label: {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ArtworkImage(coverArt: song.coverArt, size: 150, shape: .sleeve, corner: 14)
+                                Text(song.title).retro(12, .semibold).lineLimit(1).frame(width: 150, alignment: .leading)
+                                Text(song.artist ?? "").retro(9, .light, color: Theme.graphite, tracking: 1)
+                                    .lineLimit(1).frame(width: 150, alignment: .leading)
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -125,33 +130,17 @@ struct HomeView: View {
         }
     }
 
-    private var listTitle: String {
-        switch filter {
-        case 2: return "Most Played"
-        default: return "Recently Added"
-        }
-    }
+    // MARK: - Most Listened (list rows)
 
-    private var listAlbums: [Album] {
-        switch filter {
-        case 2: return frequent
-        case 1: return newest
-        default: return newest.isEmpty ? recent : newest
-        }
-    }
-
-    private var mixes: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Mixes")
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(genres.prefix(14)) { genre in
-                        Button { Task { await playGenre(genre.name) } } label: { Chip(title: genre.name) }
-                            .buttonStyle(.plain)
-                    }
+    private var mostListenedSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeaderLink(title: "Most Listened") { AlbumGridScreen(title: "Most Listened", albums: frequent) }
+            LazyVStack(spacing: 16) {
+                ForEach(frequent.prefix(5)) { album in
+                    AlbumRow(album: album)
                 }
-                .padding(.horizontal, 20)
             }
+            .padding(.horizontal, 20)
         }
     }
 
@@ -159,14 +148,14 @@ struct HomeView: View {
 
     private func load() async {
         guard let client = session.client else { return }
-        async let n = client.albumList(type: "newest", size: 24)
-        async let f = client.albumList(type: "frequent", size: 24)
-        async let r = client.albumList(type: "recent", size: 24)
-        async let g = client.genres()
+        async let n = client.albumList(type: "newest", size: 20)
+        async let f = client.albumList(type: "frequent", size: 20)
+        async let r = client.albumList(type: "recent", size: 20)
+        async let fav = client.favorites()
         newest = (try? await n) ?? []
         frequent = (try? await f) ?? []
         recent = (try? await r) ?? []
-        genres = (try? await g) ?? []
+        favorites = (try? await fav)?.song ?? []
         isLoading = false
     }
 
@@ -175,50 +164,19 @@ struct HomeView: View {
         player.play(songs, startAt: 0)
     }
     private func playRandomAlbum() async {
-        guard let album = newest.randomElement() ?? frequent.randomElement() else { return }
+        guard let album = recent.randomElement() ?? newest.randomElement() ?? frequent.randomElement() else { return }
         await playAlbum(album)
     }
     private func playAlbum(_ album: Album) async {
         guard let c = session.client, let songs = try? await c.album(id: album.id)?.song, !songs.isEmpty else { return }
         player.play(songs, startAt: 0)
     }
-    private func playGenre(_ name: String) async {
-        guard let c = session.client, let songs = try? await c.songsByGenre(name, count: 100), !songs.isEmpty else { return }
-        player.play(songs, startAt: 0)
-    }
 }
 
 // MARK: - Home components
 
-private struct AlbumRow: View {
-    let album: Album
-    let onPlay: () -> Void
-
-    var body: some View {
-        HStack(spacing: 14) {
-            NavigationLink(value: album) {
-                HStack(spacing: 14) {
-                    ArtworkImage(coverArt: album.coverArt, size: 56, shape: .sleeve, corner: 12)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(album.name).retro(14, .semibold).lineLimit(1)
-                        Text("\(album.artist ?? "Unknown") · \(album.songCount ?? 0) songs")
-                            .retro(10, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
-                    }
-                    Spacer(minLength: 8)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            Button(action: onPlay) {
-                Image(systemName: "play.fill").font(.system(size: 14)).foregroundStyle(.white)
-                    .frame(width: 38, height: 38).background(Theme.accent, in: Circle())
-            }
-            .buttonStyle(.plain)
-        }
-    }
-}
-
-private struct FeaturedCard: View {
+/// Compact curated card (small, like a tab).
+private struct CompactCard: View {
     let title: String
     let subtitle: String
     let filled: Bool
@@ -227,30 +185,66 @@ private struct FeaturedCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 0) {
-                Image(systemName: icon).font(.title3)
+            HStack(spacing: 12) {
+                Image(systemName: icon).font(.system(size: 18))
                     .foregroundStyle(filled ? .white : Theme.accent)
-                Spacer(minLength: 12)
-                Text(title).retro(24, .bold, color: filled ? .white : Theme.ink, tracking: 0.5)
-                Text(subtitle)
-                    .retro(10, .regular, color: filled ? .white.opacity(0.9) : Theme.graphite, tracking: 0.8)
-                    .lineLimit(2).padding(.top, 4)
-                Spacer(minLength: 12)
-                HStack(spacing: 10) {
-                    Image(systemName: "play.fill").font(.system(size: 13))
-                        .foregroundStyle(filled ? Theme.accent : .white)
-                        .frame(width: 36, height: 36)
-                        .background(filled ? .white : Theme.accent, in: Circle())
-                    Image(systemName: "heart").foregroundStyle(filled ? .white.opacity(0.9) : Theme.graphite)
-                    Spacer()
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).retro(15, .bold, color: filled ? .white : Theme.ink, tracking: 0.5)
+                    Text(subtitle).retro(9, .regular, color: filled ? .white.opacity(0.9) : Theme.graphite, tracking: 0.5)
                 }
+                Spacer(minLength: 8)
+                Image(systemName: "play.fill").font(.system(size: 12))
+                    .foregroundStyle(filled ? .white : Theme.accent)
             }
-            .padding(20)
-            .frame(width: 280, height: 190, alignment: .leading)
+            .padding(.horizontal, 16).padding(.vertical, 14)
+            .frame(width: 230)
             .background(filled ? Theme.accent : Theme.surface,
-                        in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(filled ? .clear : Theme.hairline, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Horizontal mini album card (thumb + artist + title) for 2-column grids.
+private struct AlbumMiniCard: View {
+    let album: Album
+
+    var body: some View {
+        NavigationLink(value: album) {
+            HStack(spacing: 10) {
+                ArtworkImage(coverArt: album.coverArt, size: 50, shape: .sleeve, corner: 10)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(album.artist ?? "").retro(9, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
+                    Text(album.name).retro(12, .semibold).lineLimit(1)
+                }
+                Spacer(minLength: 2)
+            }
+            .padding(8)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Tappable album row (Most Listened) — opens the album.
+struct AlbumRow: View {
+    let album: Album
+
+    var body: some View {
+        NavigationLink(value: album) {
+            HStack(spacing: 14) {
+                ArtworkImage(coverArt: album.coverArt, size: 56, shape: .sleeve, corner: 12)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(album.artist ?? "Unknown").retro(9, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
+                    Text(album.name).retro(14, .semibold).lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(Theme.graphite)
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
