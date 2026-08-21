@@ -117,6 +117,55 @@ public struct SubsonicClient: Sendable {
             .init(name: "submission", value: submission ? "true" : "false"),
         ])
     }
+
+    // MARK: - Favorites
+
+    public func star(id: String) async throws {
+        _ = try await send("star.view", [.init(name: "id", value: id)])
+    }
+
+    public func unstar(id: String) async throws {
+        _ = try await send("unstar.view", [.init(name: "id", value: id)])
+    }
+
+    /// Everything the user has favorited (songs/albums/artists).
+    public func favorites() async throws -> Starred2 {
+        try await send("getStarred2.view").starred2
+            ?? Starred2(artist: nil, album: nil, song: nil)
+    }
+
+    // MARK: - Smart lists (A + B)
+
+    /// Instant-mix / "start radio" — songs similar to an artist/album/song id.
+    public func similarSongs(id: String, count: Int = 50) async throws -> [Song] {
+        try await send("getSimilarSongs2.view", [
+            .init(name: "id", value: id),
+            .init(name: "count", value: String(count)),
+        ]).similarSongs2?.song ?? []
+    }
+
+    public func randomSongs(count: Int = 50, genre: String? = nil) async throws -> [Song] {
+        var p = [URLQueryItem(name: "size", value: String(count))]
+        if let genre { p.append(.init(name: "genre", value: genre)) }
+        return try await send("getRandomSongs.view", p).randomSongs?.song ?? []
+    }
+
+    // MARK: - Save to Library (Geet-Hub proxy extension, not Subsonic)
+
+    /// Ask subsonic-proxy to import a YouTube result into the real library
+    /// (hybrid: clean Deezer link → Antra flac, else save the YouTube audio).
+    /// `id` is a `yt-<videoId>` from a search result. Fire-and-forget: the proxy
+    /// runs the download in the background and Navidrome picks it up on scan.
+    public func saveToLibrary(youtubeId: String) async throws {
+        var req = URLRequest(url: credentials.baseURL.appendingPathComponent("api/download"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["id": youtubeId])
+        let (_, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+    }
 }
 
 public enum SubsonicClientError: Error, Sendable {

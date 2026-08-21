@@ -188,8 +188,13 @@ API code (`git clone https://github.com/BLeeEZ/Amperfy`).
 
 ## Proxy integration reference (what the client talks to)
 
-- **Base URL:** `http://100.75.88.86:4544` (proxy; Tailscale). Same Subsonic API
-  as Navidrome — auth via `u` + token `t` + salt `s` (Amperfy already does this).
+- **Base URL:** **`https://musicv2.nixsocket.com`** (public, via Cloudflare
+  Tunnel → proxy; works off-Tailscale incl. phone) — or `http://100.75.88.86:4544`
+  (Tailscale) / `http://192.168.1.88:4544` (LAN). Same Subsonic API as Navidrome —
+  auth via `u` + token `t` + salt `s`.
+- **Save to Library (first-party):** `POST /api/download` with `{"id":"yt-<videoId>"}`
+  → runs the same hybrid download in the background. (Endpoint added in the proxy;
+  pending deploy as of this writing.)
 - **Search:** send `search3?query=<text>&songCount=40…` → proxy returns real
   library hits PLUS YouTube virtual songs (`id="yt-<videoId>"`, `album="YouTube"`,
   with `size`, `albumId`, `artist`, `duration`, `suffix=mp3`).

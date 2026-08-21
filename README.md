@@ -22,11 +22,16 @@ result they display; Geet-Hub deliberately does not.
 **Early scaffold.** The portable core is built and tested; the app + CarPlay
 targets are created in Xcode (see `PROJECT.md`).
 
-- ✅ `GeetHubKit` — Swift Package: Subsonic API client + models + salted-MD5
-  token auth. Compiles and unit-tested (`swift test`).
-- ⬜ App target (SwiftUI) — browse / search / play / queue / now-playing.
+- ✅ `GeetHubKit` — Swift Package: Subsonic API client, models, salted-MD5 token
+  auth, favorites, smart lists (similar/random), `PlaybackQueue`
+  (shuffle/repeat/up-next), Keychain credential store, and `Session` login flow.
+  Compiles and unit-tested — **13 tests passing** (`swift test`).
+- ✅ `App/` — SwiftUI login screen (`LoginView` + `RootView` + `GeetHubApp`),
+  ready to add to the Xcode app target. (They import GeetHubKit, so they only
+  compile once inside the app target — not built by the package.)
+- ⬜ Library UI — browse / search / now-playing (next up).
 - ⬜ CarPlay scene + templates.
-- ⬜ Playlist editing UI.
+- ⬜ Playlist editing + "Save to Library" button.
 
 ## Layout
 
@@ -40,7 +45,11 @@ Geet-Hub/
 │  │  ├─ SubsonicModels.swift        Codable entities
 │  │  └─ SubsonicClient.swift        async API (search is transient by design)
 │  └─ Tests/GeetHubKitTests/
-└─ (app + CarPlay targets — added in Xcode on the build machine)
+├─ App/                  SwiftUI app-target files (add these in Xcode)
+│  ├─ GeetHubApp.swift   @main entry — creates Session
+│  ├─ RootView.swift     login vs library switch
+│  └─ LoginView.swift    server URL + username + password form
+└─ (Xcode project + CarPlay target — created on the build machine)
 ```
 
 ## Build the core

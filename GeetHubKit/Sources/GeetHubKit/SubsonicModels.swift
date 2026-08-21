@@ -21,6 +21,9 @@ public struct SubsonicResponse: Decodable, Sendable {
     public let album: AlbumWithSongs?
     public let playlists: Playlists?
     public let playlist: PlaylistWithSongs?
+    public let starred2: Starred2?
+    public let similarSongs2: SimilarSongs2?
+    public let randomSongs: RandomSongs?
 
     public var isOK: Bool { status == "ok" }
 }
@@ -47,9 +50,12 @@ public struct Song: Decodable, Sendable, Identifiable, Hashable {
     public let suffix: String?
     public let contentType: String?
     public let isVideo: Bool?
+    /// Present (a date string) when the item is starred/favorited.
+    public let starred: String?
 
     /// A virtual YouTube track injected by subsonic-proxy (id like `yt-<videoId>`).
     public var isYouTube: Bool { id.hasPrefix("yt-") }
+    public var isFavorite: Bool { starred != nil }
 }
 
 public struct Album: Decodable, Sendable, Identifiable, Hashable {
@@ -61,6 +67,9 @@ public struct Album: Decodable, Sendable, Identifiable, Hashable {
     public let songCount: Int?
     public let duration: Int?
     public let year: Int?
+    public let starred: String?
+
+    public var isFavorite: Bool { starred != nil }
 }
 
 public struct Artist: Decodable, Sendable, Identifiable, Hashable {
@@ -68,6 +77,9 @@ public struct Artist: Decodable, Sendable, Identifiable, Hashable {
     public let name: String
     public let coverArt: String?
     public let albumCount: Int?
+    public let starred: String?
+
+    public var isFavorite: Bool { starred != nil }
 }
 
 public struct Playlist: Decodable, Sendable, Identifiable, Hashable {
@@ -111,6 +123,20 @@ public struct AlbumWithSongs: Decodable, Sendable, Identifiable {
 
 public struct Playlists: Decodable, Sendable {
     public let playlist: [Playlist]?
+}
+
+public struct Starred2: Decodable, Sendable {
+    public let artist: [Artist]?
+    public let album: [Album]?
+    public let song: [Song]?
+}
+
+public struct SimilarSongs2: Decodable, Sendable {
+    public let song: [Song]?
+}
+
+public struct RandomSongs: Decodable, Sendable {
+    public let song: [Song]?
 }
 
 public struct PlaylistWithSongs: Decodable, Sendable, Identifiable {

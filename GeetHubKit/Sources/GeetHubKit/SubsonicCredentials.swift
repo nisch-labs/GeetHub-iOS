@@ -4,7 +4,7 @@ import CryptoKit
 /// Connection details + Subsonic token auth (salted MD5 — the standard
 /// `u`/`t`/`s` scheme, same as Amperfy). The password is never sent in the
 /// clear; each request uses a fresh salt.
-public struct SubsonicCredentials: Sendable, Equatable {
+public struct SubsonicCredentials: Sendable, Equatable, Codable {
     public let baseURL: URL
     public let username: String
     public let password: String
