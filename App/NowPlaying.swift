@@ -185,10 +185,7 @@ struct FullPlayerView: View {
     private var trackInfo: some View {
         VStack(alignment: .leading, spacing: 6) {
             if player.current?.isYouTube == true {
-                Text("YouTube").retro(9, .semibold, color: .white, tracking: 1)
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(Color(red: 0.90, green: 0.13, blue: 0.13),
-                                in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                YouTubeTag()
             }
             MarqueeText(text: player.current?.title ?? "—", size: 24, weight: .semibold, tracking: 1)
                 .id(player.current?.id)

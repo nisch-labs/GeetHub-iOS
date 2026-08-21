@@ -25,10 +25,7 @@ struct SongRow: View {
                 Image(systemName: "heart.fill").font(.caption2).foregroundStyle(Theme.accent)
             }
             if song.isYouTube {
-                Text("YouTube")
-                    .retro(9, .semibold, color: Theme.accent, tracking: 1.5)
-                    .padding(.horizontal, 7).padding(.vertical, 3)
-                    .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.4), lineWidth: 1))
+                YouTubeTag()
             } else if let d = song.duration {
                 Text(Self.time(d))
                     .font(.system(.caption, design: .monospaced))

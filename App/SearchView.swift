@@ -12,29 +12,39 @@ struct SearchView: View {
     @State private var searchTask: Task<Void, Never>?
     @State private var saved: Set<String> = []
     @State private var toast: String?
+    @State private var recents: [String] = []
+
+    private let recentsKey = "recentSearches"
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                    HStack(spacing: 4) {
-                        Button { player.play(songs, startAt: index) } label: {
-                            SongRow(song: song, isPlaying: player.current?.id == song.id,
-                                    favorited: !song.isYouTube && player.isFavorite(song))
-                                .contentShape(Rectangle())
+                if query.isEmpty {
+                    recentsContent
+                } else {
+                    ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+                        HStack(spacing: 4) {
+                            Button {
+                                addRecent(query)
+                                player.play(songs, startAt: index)
+                            } label: {
+                                SongRow(song: song, isPlaying: player.current?.id == song.id,
+                                        favorited: !song.isYouTube && player.isFavorite(song))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            if song.isYouTube {
+                                saveButton(for: song)
+                            } else {
+                                SongMenuButton(song: song)
+                            }
                         }
-                        .buttonStyle(.plain)
-                        if song.isYouTube {
-                            saveButton(for: song)
-                        } else {
-                            SongMenuButton(song: song)
-                        }
+                        .listRowBackground(Theme.surface)
+                        .listRowSeparatorTint(Theme.hairline)
                     }
-                    .listRowBackground(Theme.surface)
-                    .listRowSeparatorTint(Theme.hairline)
-                }
-                if !isSearching && songs.isEmpty && !query.isEmpty {
-                    ContentUnavailableView.search(text: query).listRowBackground(Theme.paper)
+                    if !isSearching && songs.isEmpty {
+                        ContentUnavailableView.search(text: query).listRowBackground(Theme.paper)
+                    }
                 }
             }
             .listStyle(.plain)
@@ -49,8 +59,72 @@ struct SearchView: View {
         }
         .tint(Theme.accent)
         .searchable(text: $query, prompt: "Your library or YouTube")
+        .onSubmit(of: .search) { addRecent(query) }
         .onChange(of: query) { _, q in scheduleSearch(q) }
+        .task { loadRecents() }
     }
+
+    // MARK: - Recent searches
+
+    @ViewBuilder private var recentsContent: some View {
+        if recents.isEmpty {
+            ContentUnavailableView("Find your music", systemImage: "magnifyingglass",
+                description: Text("Search your library — or anything on YouTube."))
+                .listRowBackground(Theme.paper)
+        } else {
+            HStack {
+                Text("Recent").retro(12, .bold, color: Theme.graphite, tracking: 2)
+                Spacer()
+                Button { clearRecents() } label: {
+                    Text("Clear").retro(10, .medium, color: Theme.accent, tracking: 1)
+                }
+                .buttonStyle(.plain)
+            }
+            .listRowBackground(Theme.paper)
+            .listRowSeparator(.hidden)
+
+            ForEach(recents, id: \.self) { term in
+                Button { query = term } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "clock.arrow.circlepath").foregroundStyle(Theme.graphite)
+                        Text(term).retro(14, .medium)
+                        Spacer()
+                        Image(systemName: "arrow.up.left").font(.footnote).foregroundStyle(Theme.graphite)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(Theme.surface)
+                .listRowSeparatorTint(Theme.hairline)
+            }
+        }
+    }
+
+    private func loadRecents() {
+        if let data = UserDefaults.standard.data(forKey: recentsKey),
+           let arr = try? JSONDecoder().decode([String].self, from: data) {
+            recents = arr
+        }
+        #if DEBUG
+        if recents.isEmpty, ProcessInfo.processInfo.environment["GEETHUB_SEEDRECENTS"] == "1" {
+            recents = ["Bir Bahadur", "Coldplay", "Nepali songs", "John Farnham", "Lo-fi"]
+        }
+        #endif
+    }
+    private func saveRecents() {
+        if let data = try? JSONEncoder().encode(recents) {
+            UserDefaults.standard.set(data, forKey: recentsKey)
+        }
+    }
+    private func addRecent(_ q: String) {
+        let t = q.trimmingCharacters(in: .whitespaces)
+        guard t.count >= 2 else { return }
+        recents.removeAll { $0.caseInsensitiveCompare(t) == .orderedSame }
+        recents.insert(t, at: 0)
+        if recents.count > 12 { recents = Array(recents.prefix(12)) }
+        saveRecents()
+    }
+    private func clearRecents() { recents = []; saveRecents() }
 
     @ViewBuilder private func saveButton(for song: Song) -> some View {
         if saved.contains(song.id) {

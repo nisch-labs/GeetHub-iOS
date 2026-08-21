@@ -55,6 +55,16 @@ struct AlbumShelf: View {
     }
 }
 
+/// The red "YouTube" tag used on song rows and the player.
+struct YouTubeTag: View {
+    var body: some View {
+        Text("YouTube").retro(9, .semibold, color: .white, tracking: 1)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Color(red: 0.90, green: 0.13, blue: 0.13),
+                        in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+    }
+}
+
 /// Pill chip (genres, mixes).
 struct Chip: View {
     let title: String
