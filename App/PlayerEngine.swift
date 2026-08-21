@@ -38,6 +38,24 @@ final class PlayerEngine {
     var isCurrentFavorite: Bool { current.map(isFavorite) ?? false }
     func toggleFavorite() { if let s = current { setFavorite(s) } }
 
+    // Recently played (local, persisted) — reflects what you actually played here.
+    private(set) var recentlyPlayed: [Song] = []
+    private let recentlyPlayedKey = "recentlyPlayedSongs"
+    private func loadRecentlyPlayed() {
+        if let data = UserDefaults.standard.data(forKey: recentlyPlayedKey),
+           let songs = try? JSONDecoder().decode([Song].self, from: data) {
+            recentlyPlayed = songs
+        }
+    }
+    private func recordPlayed(_ song: Song) {
+        recentlyPlayed.removeAll { $0.id == song.id }
+        recentlyPlayed.insert(song, at: 0)
+        if recentlyPlayed.count > 30 { recentlyPlayed = Array(recentlyPlayed.prefix(30)) }
+        if let data = try? JSONEncoder().encode(recentlyPlayed) {
+            UserDefaults.standard.set(data, forKey: recentlyPlayedKey)
+        }
+    }
+
     // Save a YouTube track into the real library (via the proxy).
     private(set) var savedYouTube: Set<String> = []
     var isCurrentSaved: Bool { current.map { savedYouTube.contains($0.id) } ?? false }
@@ -98,6 +116,7 @@ final class PlayerEngine {
         addPeriodicTime()
         observeItemEnd()
         setupRemoteCommands()
+        loadRecentlyPlayed()
     }
 
     // MARK: - Controls
@@ -148,6 +167,7 @@ final class PlayerEngine {
         duration = song.duration.map(Double.init) ?? 0
         currentTime = 0
         updateNowPlaying()
+        recordPlayed(song)
         Task { try? await client.scrobble(id: song.id, submission: false) }  // "now playing"
     }
 

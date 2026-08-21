@@ -25,15 +25,23 @@ struct NowPlayingAccessory: View {
                 }
                 Spacer(minLength: 6)
                 if player.current != nil {
-                    Button { player.togglePlayPause() } label: {
-                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.body).foregroundStyle(Theme.accent)
-                    }.buttonStyle(.plain)
-                    if !isInline {
-                        Button { player.next() } label: {
-                            Image(systemName: "forward.fill").font(.footnote).foregroundStyle(Theme.ink)
-                        }.buttonStyle(.plain).padding(.leading, 4)
+                    HStack(spacing: 18) {
+                        if !isInline {
+                            Button { player.previous() } label: {
+                                Image(systemName: "backward.fill").foregroundStyle(Theme.ink)
+                            }.buttonStyle(.plain)
+                        }
+                        Button { player.togglePlayPause() } label: {
+                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                                .foregroundStyle(Theme.accent)
+                        }.buttonStyle(.plain)
+                        if !isInline {
+                            Button { player.next() } label: {
+                                Image(systemName: "forward.fill").foregroundStyle(Theme.ink)
+                            }.buttonStyle(.plain)
+                        }
                     }
+                    .font(.body)
                 } else {
                     Image(systemName: "play.fill").font(.body).foregroundStyle(Theme.graphite)
                 }

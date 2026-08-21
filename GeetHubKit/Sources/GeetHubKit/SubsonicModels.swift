@@ -39,7 +39,7 @@ public struct SubsonicAPIError: Decodable, Sendable, Error {
 
 // MARK: - Entities
 
-public struct Song: Decodable, Sendable, Identifiable, Hashable {
+public struct Song: Codable, Sendable, Identifiable, Hashable {
     public let id: String
     public let title: String
     public let album: String?
@@ -56,6 +56,8 @@ public struct Song: Decodable, Sendable, Identifiable, Hashable {
     public let isVideo: Bool?
     /// ISO-8601 date the track was added to the library (sortable lexically).
     public let created: String?
+    /// Number of times the track has been played (server-side).
+    public let playCount: Int?
     /// Present (a date string) when the item is starred/favorited.
     public let starred: String?
 
