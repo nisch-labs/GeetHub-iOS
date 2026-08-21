@@ -225,6 +225,40 @@ API code (`git clone https://github.com/BLeeEZ/Amperfy`).
 - Build workflow: Xcode-only vs also wire `xcodebuild` for compile-checks.
 - Decide whether to keep Amperfy's offline-download feature (v2) or strip it.
 
+## TODO next — YouTube download: progress + folder choice
+
+Requested Aug 21 2026. When saving a YouTube track to the library, (a) show the
+real download progress, and (b) let the user pick the destination library folder
+(like Antra's dropdown). Spans the **proxy + app**.
+
+Findings (verified on the server):
+- Antra `GET /api/meta` (needs the ADMIN_KEY session) returns
+  `folders: ["20 Minute Books","English","Hindi","John Farnham","Nepali","YouTube"]`,
+  plus `sources`, `formats`, `music_dir`. Use this for the folder picker.
+- Antra `POST /api/jobs` already accepts a `folder` field. Job status is
+  queued/running/done via `GET /api/jobs`; the job **log** (`/api/jobs/{id}/log`)
+  carries stage lines and sometimes `NN.N%` download lines to parse for a percent.
+
+Plan:
+- **Proxy** (`subsonic-proxy/app.py`, `antra.py`):
+  - `GET /api/folders` → proxy Antra `/api/meta` `folders` (login with ADMIN_KEY).
+  - `POST /api/download` → accept `{id, folder}`, generate a `download_id`, store
+    an in-memory status dict `{state, percent, detail}`, run the hybrid download in
+    the background updating it; return `{download_id}`. States: queued → finding
+    source (deezer) → downloading (Antra job; parse % from the job log) → done /
+    saved-from-youtube / failed. Pass `folder` through to Antra.
+  - `GET /api/download/status?id=<download_id>` → return the status dict.
+  - process_download / antra.download_wait: take a `folder` + a status object to
+    update (percent parsed from the Antra job log tail).
+- **App** (GeetHubKit + Search):
+  - Kit: `libraryFolders()`, `startSave(youtubeId, folder) -> download_id`,
+    `downloadStatus(id) -> {state, percent, detail}`.
+  - Search: tapping the download button opens a small **folder menu**; on choose,
+    start the download and replace the button with a live **progress ring + %**
+    (poll status), ending in a checkmark or an error.
+- Keep the magic-playlist path and the current no-folder `/api/download` working
+  (default folder = library root) for backwards compatibility.
+
 ## Related
 
 - Proxy service: workspace `subsonic-proxy/` and `CLAUDE.md`.
