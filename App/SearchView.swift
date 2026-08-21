@@ -134,7 +134,7 @@ struct SearchView: View {
                         }
                         .buttonStyle(.plain)
                         if song.isYouTube {
-                            saveButton(for: song).padding(.trailing, 14)
+                            saveButton(for: song).padding(.leading, 12).padding(.trailing, 14)
                         } else {
                             SongMenuButton(song: song).padding(.trailing, 4)
                         }

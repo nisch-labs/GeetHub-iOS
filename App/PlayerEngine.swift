@@ -44,13 +44,13 @@ final class PlayerEngine {
     private func loadRecentlyPlayed() {
         if let data = UserDefaults.standard.data(forKey: recentlyPlayedKey),
            let songs = try? JSONDecoder().decode([Song].self, from: data) {
-            recentlyPlayed = songs
+            recentlyPlayed = Array(songs.prefix(10))
         }
     }
     private func recordPlayed(_ song: Song) {
         recentlyPlayed.removeAll { $0.id == song.id }
         recentlyPlayed.insert(song, at: 0)
-        if recentlyPlayed.count > 30 { recentlyPlayed = Array(recentlyPlayed.prefix(30)) }
+        if recentlyPlayed.count > 10 { recentlyPlayed = Array(recentlyPlayed.prefix(10)) }
         if let data = try? JSONEncoder().encode(recentlyPlayed) {
             UserDefaults.standard.set(data, forKey: recentlyPlayedKey)
         }
