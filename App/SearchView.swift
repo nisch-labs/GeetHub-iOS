@@ -1,4 +1,5 @@
-// App-target file. Live search — library + YouTube results, play, Save-to-Library.
+// App-target file. Search — custom title + field, recent searches, live results
+// from the library and YouTube, with play / Save-to-Library.
 import SwiftUI
 import GeetHubKit
 
@@ -18,87 +19,134 @@ struct SearchView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if query.isEmpty {
-                    recentsContent
-                } else {
-                    ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                        HStack(spacing: 4) {
-                            Button {
-                                addRecent(query)
-                                player.play(songs, startAt: index)
-                            } label: {
-                                SongRow(song: song, isPlaying: player.current?.id == song.id,
-                                        favorited: !song.isYouTube && player.isFavorite(song))
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            if song.isYouTube {
-                                saveButton(for: song)
-                            } else {
-                                SongMenuButton(song: song)
-                            }
-                        }
-                        .listRowBackground(Theme.surface)
-                        .listRowSeparatorTint(Theme.hairline)
-                    }
-                    if !isSearching && songs.isEmpty {
-                        ContentUnavailableView.search(text: query).listRowBackground(Theme.paper)
-                    }
-                }
+            VStack(spacing: 0) {
+                header
+                searchField
+                content
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
             .paperBackground()
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Text("Search").retro(20, .bold, tracking: 1) }
-            }
-            .overlay(alignment: .top) { if isSearching { ProgressView().padding(.top, 4) } }
+            .navigationBarHidden(true)
             .overlay(alignment: .bottom) { toastView }
         }
         .tint(Theme.accent)
-        .searchable(text: $query, prompt: "Your library or YouTube")
-        .onSubmit(of: .search) { addRecent(query) }
         .onChange(of: query) { _, q in scheduleSearch(q) }
         .task { loadRecents() }
     }
 
-    // MARK: - Recent searches
+    // MARK: - Header + field
 
-    @ViewBuilder private var recentsContent: some View {
-        if recents.isEmpty {
-            ContentUnavailableView("Find your music", systemImage: "magnifyingglass",
-                description: Text("Search your library — or anything on YouTube."))
-                .listRowBackground(Theme.paper)
-        } else {
-            HStack {
-                Text("Recent").retro(12, .bold, color: Theme.graphite, tracking: 2)
-                Spacer()
-                Button { clearRecents() } label: {
-                    Text("Clear").retro(10, .medium, color: Theme.accent, tracking: 1)
+    private var header: some View {
+        HStack {
+            Text("Search").retro(20, .bold, tracking: 1)
+            Spacer()
+        }
+        .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 14)
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass").foregroundStyle(Theme.graphite)
+            TextField("Your library or YouTube", text: $query)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .submitLabel(.search)
+                .onSubmit { addRecent(query) }
+                .foregroundStyle(Theme.ink)
+            if isSearching {
+                ProgressView().controlSize(.small)
+            } else if !query.isEmpty {
+                Button { query = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.graphite)
                 }
                 .buttonStyle(.plain)
-            }
-            .listRowBackground(Theme.paper)
-            .listRowSeparator(.hidden)
-
-            ForEach(recents, id: \.self) { term in
-                Button { query = term } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "clock.arrow.circlepath").foregroundStyle(Theme.graphite)
-                        Text(term).retro(14, .medium)
-                        Spacer()
-                        Image(systemName: "arrow.up.left").font(.footnote).foregroundStyle(Theme.graphite)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .listRowBackground(Theme.surface)
-                .listRowSeparatorTint(Theme.hairline)
             }
         }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(Theme.surface, in: Capsule())
+        .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
+        .padding(.horizontal, 20).padding(.bottom, 10)
     }
+
+    // MARK: - Content
+
+    @ViewBuilder private var content: some View {
+        if query.isEmpty {
+            if recents.isEmpty {
+                ContentUnavailableView("Find your music", systemImage: "magnifyingglass",
+                    description: Text("Search your library — or anything on YouTube."))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                recentsList
+            }
+        } else if !isSearching && songs.isEmpty {
+            ContentUnavailableView.search(text: query)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            resultsList
+        }
+    }
+
+    private var recentsList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                HStack {
+                    Text("Recent").retro(12, .bold, color: Theme.graphite, tracking: 2)
+                    Spacer()
+                    Button { clearRecents() } label: {
+                        Text("Clear").retro(10, .medium, color: Theme.accent, tracking: 1)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 20).padding(.vertical, 10)
+
+                ForEach(recents, id: \.self) { term in
+                    Button { query = term } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "clock.arrow.circlepath").foregroundStyle(Theme.graphite)
+                            Text(term).retro(14, .medium)
+                            Spacer()
+                            Image(systemName: "arrow.up.left").font(.footnote).foregroundStyle(Theme.graphite)
+                        }
+                        .padding(.horizontal, 20).padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 20)
+                }
+            }
+            .padding(.bottom, 140)
+        }
+    }
+
+    private var resultsList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+                    HStack(spacing: 0) {
+                        Button {
+                            addRecent(query)
+                            player.play(songs, startAt: index)
+                        } label: {
+                            SongRow(song: song, isPlaying: player.current?.id == song.id,
+                                    favorited: !song.isYouTube && player.isFavorite(song))
+                                .padding(.leading, 20).padding(.vertical, 10)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        if song.isYouTube {
+                            saveButton(for: song).padding(.trailing, 14)
+                        } else {
+                            SongMenuButton(song: song).padding(.trailing, 4)
+                        }
+                    }
+                    Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 76)
+                }
+            }
+            .padding(.bottom, 140)
+        }
+    }
+
+    // MARK: - Recent searches
 
     private func loadRecents() {
         if let data = UserDefaults.standard.data(forKey: recentsKey),
@@ -126,6 +174,8 @@ struct SearchView: View {
     }
     private func clearRecents() { recents = []; saveRecents() }
 
+    // MARK: - Save-to-Library + toast
+
     @ViewBuilder private func saveButton(for song: Song) -> some View {
         if saved.contains(song.id) {
             Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.accent)
@@ -142,10 +192,12 @@ struct SearchView: View {
             Text(toast).retro(11, .medium, color: .white, tracking: 1)
                 .padding(.horizontal, 16).padding(.vertical, 11)
                 .background(Theme.ink, in: Capsule())
-                .padding(.bottom, 76)
+                .padding(.bottom, 120)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
+
+    // MARK: - Search
 
     private func scheduleSearch(_ q: String) {
         searchTask?.cancel()

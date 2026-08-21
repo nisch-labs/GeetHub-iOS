@@ -82,7 +82,6 @@ struct HomeView: View {
 
     private var curated: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Curated for you")
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     CompactCard(title: "Discover", subtitle: "A fresh shuffle", filled: false, icon: "shuffle") {
