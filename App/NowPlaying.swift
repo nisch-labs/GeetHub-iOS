@@ -2,38 +2,56 @@
 import SwiftUI
 import GeetHubKit
 
-// MARK: - Mini bar
+// MARK: - Now-playing bottom accessory (adapts to the tab bar's minimize state)
 
-struct NowPlayingBar: View {
+struct NowPlayingAccessory: View {
     @Environment(PlayerEngine.self) private var player
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
     var onTap: () -> Void = {}
 
+    private var isInline: Bool { placement == .inline }
+
     var body: some View {
-        if let song = player.current {
-            Button(action: onTap) {
-                HStack(spacing: 12) {
-                    ArtworkImage(coverArt: song.coverArt, size: 40, shape: .sleeve, corner: 9)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(song.title).retro(13, .medium).lineLimit(1)
-                        Text(song.artist ?? "").retro(9, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
+        Button {
+            if player.current != nil { onTap() }
+        } label: {
+            HStack(spacing: 10) {
+                artwork
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(player.current?.title ?? "Not Playing").retro(12, .medium).lineLimit(1)
+                    if !isInline, let artist = player.current?.artist, !artist.isEmpty {
+                        Text(artist).retro(8, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
                     }
-                    Spacer(minLength: 8)
+                }
+                Spacer(minLength: 6)
+                if player.current != nil {
                     Button { player.togglePlayPause() } label: {
                         Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.title3).foregroundStyle(Theme.accent)
+                            .font(.body).foregroundStyle(Theme.accent)
                     }.buttonStyle(.plain)
-                    Button { player.next() } label: {
-                        Image(systemName: "forward.end").font(.body).foregroundStyle(Theme.ink)
-                    }.buttonStyle(.plain).padding(.leading, 2)
+                    if !isInline {
+                        Button { player.next() } label: {
+                            Image(systemName: "forward.fill").font(.footnote).foregroundStyle(Theme.ink)
+                        }.buttonStyle(.plain).padding(.leading, 4)
+                    }
+                } else {
+                    Image(systemName: "play.fill").font(.body).foregroundStyle(Theme.graphite)
                 }
-                .padding(.horizontal, 14).padding(.vertical, 9)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.5))
-                .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
-                .padding(.horizontal, 14)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder private var artwork: some View {
+        if let art = player.current?.coverArt {
+            ArtworkImage(coverArt: art, size: 30, shape: .sleeve, corner: 6)
+        } else {
+            RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.hairline)
+                .frame(width: 30, height: 30)
+                .overlay(Image(systemName: "music.note").font(.caption).foregroundStyle(Theme.graphite))
         }
     }
 }

@@ -13,19 +13,29 @@ struct MainTabView: View {
     var body: some View {
         Group {
             if let player {
-                ZStack(alignment: .bottom) {
-                    // Native iOS 26 Liquid Glass tab bar, icon-only (no labels).
-                    // .id(theme.choice) on each tab's content re-tints it when the
-                    // accent changes, without disturbing the TabView selection.
-                    TabView(selection: $selectedTab) {
-                        HomeView(onSelectTab: { selectedTab = $0 }).id(theme.choice).tag(0).tabItem { Image(systemName: "house") }
-                        LibraryView().id(theme.choice).tag(1).tabItem { Image(systemName: "square.stack") }
-                        FavoritesView().id(theme.choice).tag(2).tabItem { Image(systemName: "heart") }
-                        SearchView().id(theme.choice).tag(3).tabItem { Image(systemName: "magnifyingglass") }
-                        SettingsView().id(theme.choice).tag(4).tabItem { Image(systemName: "gearshape") }
+                // Native iOS 26: labeled tabs, a Search role tab, a now-playing
+                // bottom accessory, and a tab bar that minimizes on scroll — the
+                // Apple Music behaviour. .id(theme.choice) re-tints on accent change.
+                TabView(selection: $selectedTab) {
+                    Tab("Home", systemImage: "house", value: 0) {
+                        HomeView(onSelectTab: { selectedTab = $0 }).id(theme.choice)
                     }
-                    NowPlayingBar(onTap: { showPlayer = true })
-                        .padding(.bottom, 64)   // float above the glass bar
+                    Tab("Library", systemImage: "square.stack", value: 1) {
+                        LibraryView().id(theme.choice)
+                    }
+                    Tab("Favourites", systemImage: "heart", value: 2) {
+                        FavoritesView().id(theme.choice)
+                    }
+                    Tab("Settings", systemImage: "gearshape", value: 4) {
+                        SettingsView().id(theme.choice)
+                    }
+                    Tab("Search", systemImage: "magnifyingglass", value: 3, role: .search) {
+                        SearchView().id(theme.choice)
+                    }
+                }
+                .tabBarMinimizeBehavior(.onScrollDown)
+                .tabViewBottomAccessory {
+                    NowPlayingAccessory(onTap: { showPlayer = true })
                 }
                 .environment(player)
                 .environment(picker)
