@@ -1,17 +1,49 @@
 // App-target file. The Geet-Hub visual system: classic / retro / vinyl / minimal.
 // One teal accent, paper background, Oswald in liner-note uppercase.
 import SwiftUI
+import UIKit
 
 enum Theme {
-    static let paper    = Color(red: 0.957, green: 0.957, blue: 0.949) // #F4F4F2
-    static let surface  = Color.white
-    static let ink      = Color(red: 0.078, green: 0.086, blue: 0.102) // #14161A
-    static let graphite = Color(red: 0.541, green: 0.561, blue: 0.596) // #8A8F98
-    static let hairline = Color(red: 0.894, green: 0.894, blue: 0.878) // #E4E4E0
+    // #F4F4F2 / #0E0F12
+    static let paper    = dynamic(light: (0.957, 0.957, 0.949), dark: (0.055, 0.059, 0.071))
+    // #FFFFFF / #1B1D22
+    static let surface  = dynamic(light: (1.000, 1.000, 1.000), dark: (0.106, 0.114, 0.133))
+    // #14161A / #EDEEF2
+    static let ink      = dynamic(light: (0.078, 0.086, 0.102), dark: (0.929, 0.933, 0.949))
+    static let graphite = Color(red: 0.541, green: 0.561, blue: 0.596) // #8A8F98 — same in both
+    // #E4E4E0 / #2A2C31
+    static let hairline = dynamic(light: (0.894, 0.894, 0.878), dark: (0.165, 0.173, 0.192))
 
     static let accentKey = "accentChoice"
+    static let colorSchemeKey = "colorSchemeChoice"
     /// The current accent — user-selectable in Settings, persisted.
     static var accent: Color { AccentChoice.current.color }
+
+    private static func dynamic(light: (CGFloat, CGFloat, CGFloat),
+                                dark: (CGFloat, CGFloat, CGFloat)) -> Color {
+        let l = UIColor(red: light.0, green: light.1, blue: light.2, alpha: 1)
+        let d = UIColor(red: dark.0,  green: dark.1,  blue: dark.2,  alpha: 1)
+        return Color(UIColor { $0.userInterfaceStyle == .dark ? d : l })
+    }
+}
+
+/// Light / Dark / System — user-selectable in Settings, persisted.
+enum ColorSchemeChoice: String, CaseIterable, Identifiable {
+    case system, light, dark
+
+    var id: String { rawValue }
+    var label: String { rawValue.capitalized }
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
+
+    static var current: ColorSchemeChoice {
+        ColorSchemeChoice(rawValue: UserDefaults.standard.string(forKey: Theme.colorSchemeKey) ?? "") ?? .system
+    }
 }
 
 /// Selectable accent colors.
@@ -45,15 +77,19 @@ final class ThemeManager {
     var choice: AccentChoice {
         didSet { UserDefaults.standard.set(choice.rawValue, forKey: Theme.accentKey) }
     }
+    var scheme: ColorSchemeChoice {
+        didSet { UserDefaults.standard.set(scheme.rawValue, forKey: Theme.colorSchemeKey) }
+    }
     init() {
+        var initialAccent = AccentChoice.current
         #if DEBUG
         if let a = ProcessInfo.processInfo.environment["GEETHUB_ACCENT"], let c = AccentChoice(rawValue: a) {
             UserDefaults.standard.set(a, forKey: Theme.accentKey)   // keep static Theme.accent in sync
-            choice = c
-            return
+            initialAccent = c
         }
         #endif
-        choice = AccentChoice.current
+        choice = initialAccent
+        scheme = ColorSchemeChoice.current
     }
     var accent: Color { choice.color }
 }

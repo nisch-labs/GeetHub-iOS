@@ -26,8 +26,15 @@ targets:
           - audio
         UIAppFonts:
           - Oswald.ttf
+        # iPhone stays portrait-only (vinyl UI is designed for it). iPad and
+        # Mac Catalyst get all orientations via the ~ipad variant below.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         # Self-hosted servers may be plain http (Tailscale/LAN); allow it.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
@@ -42,3 +49,12 @@ targets:
         # The simulator ignores this and builds unsigned regardless.
         DEVELOPMENT_TEAM: J27CK6TLVS
         CODE_SIGN_STYLE: Automatic
+        # Mac Catalyst — same target, runs the iOS app on macOS via the UIKit
+        # bridge. iOS-26-only chrome (tabViewBottomAccessory, tabBarMinimize)
+        # is guarded with #if targetEnvironment(macCatalyst) in App code.
+        SUPPORTS_MACCATALYST: YES
+        # Same bundle id on Mac, not a derived .maccatalyst.* variant.
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        # Disable the alternative "Designed for iPad" mode — we're a real
+        # Catalyst app, not the scaled iPad-simulator shim.
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO

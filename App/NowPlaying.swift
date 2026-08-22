@@ -6,10 +6,15 @@ import GeetHubKit
 
 struct NowPlayingAccessory: View {
     @Environment(PlayerEngine.self) private var player
+    #if !targetEnvironment(macCatalyst)
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
-    var onTap: () -> Void = {}
-
     private var isInline: Bool { placement == .inline }
+    #else
+    // Catalyst doesn't have the iOS-26 tab-bar accessory placement env; the
+    // mini player is rendered via .safeAreaInset instead, always expanded.
+    private var isInline: Bool { false }
+    #endif
+    var onTap: () -> Void = {}
 
     var body: some View {
         Button {
@@ -102,11 +107,15 @@ struct FullPlayerView: View {
                 Image(systemName: "chevron.down").font(.headline)
             }
             Spacer()
-            if player.current?.isYouTube == true {
-                Button { player.saveCurrentToLibrary() } label: {
-                    Image(systemName: player.isCurrentSaved ? "checkmark.circle.fill" : "arrow.down.circle")
-                        .font(.headline)
-                        .foregroundStyle(player.isCurrentSaved ? Theme.accent : Theme.ink)
+            if player.current?.isVirtual == true {
+                if let pct = player.currentDownloadPercent {
+                    ProgressRing(percent: pct).frame(width: 20, height: 20)
+                } else {
+                    Button { player.saveCurrentToLibrary() } label: {
+                        Image(systemName: player.isCurrentSaved ? "checkmark.circle.fill" : "arrow.down.circle")
+                            .font(.headline)
+                            .foregroundStyle(player.isCurrentSaved ? Theme.accent : Theme.ink)
+                    }
                 }
             } else {
                 Button { player.toggleFavorite() } label: {
@@ -189,8 +198,8 @@ struct FullPlayerView: View {
     // YouTube tag, then title (marquee), then artist
     private var trackInfo: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if player.current?.isYouTube == true {
-                YouTubeTag()
+            if let s = player.current, let src = s.virtualSource, !player.savedYouTube.contains(s.id) {
+                SourceTag(source: src)
             }
             MarqueeText(text: player.current?.title ?? "—", size: 24, weight: .semibold, tracking: 1)
                 .id(player.current?.id)

@@ -41,6 +41,14 @@ struct HomeView: View {
             .overlay { if isLoading { ProgressView() } }
         }
         .task { await load() }
+        // A save just completed — give Navidrome a couple of seconds to scan,
+        // then refresh so the new song appears in "Recently Added".
+        .onChange(of: player.savedYouTube.count) { _, _ in
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                await load()
+            }
+        }
     }
 
     // MARK: - Header
@@ -109,6 +117,11 @@ struct HomeView: View {
                         Button { player.play(items, startAt: index) } label: {
                             VStack(alignment: .leading, spacing: small ? 6 : 8) {
                                 ArtworkImage(coverArt: song.coverArt, size: size, shape: .sleeve, corner: small ? 10 : 14)
+                                    .overlay(alignment: .topLeading) {
+                                        if let src = song.virtualSource, !player.savedYouTube.contains(song.id) {
+                                            SourceTag(source: src).padding(6)
+                                        }
+                                    }
                                 Text(song.title).retro(small ? 10 : 12, .semibold).lineLimit(1)
                                     .frame(width: size, alignment: .leading)
                                 Text(song.artist ?? "").retro(small ? 8 : 9, .light, color: Theme.graphite, tracking: 1)
@@ -173,17 +186,30 @@ struct HomeView: View {
 
     private func load() async {
         guard let client = session.client else { return }
-        async let songsA = client.allSongs(size: 300)
+        async let songsA = client.allSongs(size: 500)
         async let favA = client.favorites()
         async let albumsA = client.albumList(type: "newest", size: 20)
         async let plA = client.playlists()
         let all = (try? await songsA) ?? []
-        recentlyAdded = all.sorted { ($0.created ?? "") > ($1.created ?? "") }
         mostListened = all.filter { ($0.playCount ?? 0) > 0 }
             .sorted { ($0.playCount ?? 0) > ($1.playCount ?? 0) }
         favorites = (try? await favA)?.song ?? []
-        albumsForRediscover = (try? await albumsA) ?? []
+        let newestAlbums = (try? await albumsA) ?? []
+        albumsForRediscover = newestAlbums
         allPlaylists = (try? await plA) ?? []
+        // "Recently Added" from the newest N albums (reliable regardless of
+        // library size) — expand each to its songs and sort by song `created`.
+        // `allSongs(size:)` returns whatever server order and would truncate
+        // freshly-added tracks out of the window on a large library.
+        let expanded = await withTaskGroup(of: [Song].self) { group in
+            for album in newestAlbums.prefix(15) {
+                group.addTask { (try? await client.album(id: album.id))?.song ?? [] }
+            }
+            var acc: [Song] = []
+            for await songs in group { acc.append(contentsOf: songs) }
+            return acc
+        }
+        recentlyAdded = expanded.sorted { ($0.created ?? "") > ($1.created ?? "") }
         #if DEBUG
         if ProcessInfo.processInfo.environment["GEETHUB_SEEDPLFAV"] == "1" {
             for p in allPlaylists.prefix(4) where !playlistFavs.isFavorite(p.id) { playlistFavs.toggle(p.id) }

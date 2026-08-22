@@ -55,14 +55,63 @@ final class PlayerEngine {
             UserDefaults.standard.set(data, forKey: recentlyPlayedKey)
         }
     }
+    func clearRecentlyPlayed() {
+        recentlyPlayed = []
+        UserDefaults.standard.removeObject(forKey: recentlyPlayedKey)
+    }
+    func clearSavedYouTube() {
+        savedYouTube.removeAll()
+        failedDownloads.removeAll()
+    }
 
     // Save a YouTube track into the real library (via the proxy).
+    // Progress dict: yt-id → percent while in flight (nil = not downloading).
+    // Failed set lets rows/player show a retry affordance.
     private(set) var savedYouTube: Set<String> = []
+    private(set) var downloads: [String: Int] = [:]
+    private(set) var failedDownloads: Set<String> = []
     var isCurrentSaved: Bool { current.map { savedYouTube.contains($0.id) } ?? false }
+    var currentDownloadPercent: Int? { current.flatMap { downloads[$0.id] } }
+
+    func startedDownload(_ id: String) {
+        failedDownloads.remove(id)
+        downloads[id] = 0
+    }
+    func setDownloadProgress(_ id: String, percent: Int) {
+        guard downloads[id] != nil else { return }
+        downloads[id] = max(0, min(99, percent))
+    }
+    func finishedDownload(_ id: String, success: Bool) {
+        downloads.removeValue(forKey: id)
+        if success { savedYouTube.insert(id) } else { failedDownloads.insert(id) }
+    }
+
     func saveCurrentToLibrary() {
-        guard let s = current, s.isYouTube, !savedYouTube.contains(s.id) else { return }
-        savedYouTube.insert(s.id)
-        Task { try? await client.saveToLibrary(youtubeId: s.id) }
+        guard let s = current, s.isVirtual, !savedYouTube.contains(s.id),
+              downloads[s.id] == nil else { return }
+        startedDownload(s.id)
+        Task {
+            do {
+                let did = try await client.startSave(youtubeId: s.id)
+                guard let did else { finishedDownload(s.id, success: true); return }
+                var errors = 0
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(1))
+                    do {
+                        let st = try await client.downloadStatus(downloadId: did)
+                        errors = 0
+                        if st.state == "done" { finishedDownload(s.id, success: true); return }
+                        if st.state == "failed" { finishedDownload(s.id, success: false); return }
+                        setDownloadProgress(s.id, percent: st.percent)
+                    } catch {
+                        errors += 1
+                        if errors >= 5 { finishedDownload(s.id, success: false); return }
+                    }
+                }
+            } catch {
+                finishedDownload(s.id, success: false)
+            }
+        }
     }
 
     // Queue editing / Up Next.
@@ -192,8 +241,12 @@ final class PlayerEngine {
     private func observeItemEnd() { /* per-item, wired in startCurrent */ }
 
     private func configureAudioSession() {
+        // AVAudioSession is an iOS concept for coordinating with other apps.
+        // Mac Catalyst doesn't have it (macOS handles audio at the OS level).
+        #if !targetEnvironment(macCatalyst)
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
+        #endif
     }
 
     // MARK: - Now Playing / remote

@@ -77,13 +77,23 @@ public struct SubsonicClient: Sendable {
 
     /// Live server search. Results are transient — never persisted. YouTube
     /// virtual tracks (from subsonic-proxy) arrive here just like real songs.
-    public func search(_ query: String, artistCount: Int = 20, albumCount: Int = 20, songCount: Int = 40) async throws -> SearchResult3 {
-        let r = try await send("search3.view", [
+    /// ``ytSource`` picks the proxy's augment engine: ``"youtube"`` (broad,
+    /// noisier) or ``"ytmusic"`` (cleaner, song-only). Nil = proxy default.
+    public func search(_ query: String,
+                       artistCount: Int = 20,
+                       albumCount: Int = 20,
+                       songCount: Int = 40,
+                       ytSource: String? = nil) async throws -> SearchResult3 {
+        var params: [URLQueryItem] = [
             .init(name: "query", value: query),
             .init(name: "artistCount", value: String(artistCount)),
             .init(name: "albumCount", value: String(albumCount)),
             .init(name: "songCount", value: String(songCount)),
-        ])
+        ]
+        if let ytSource, !ytSource.isEmpty {
+            params.append(.init(name: "ytSource", value: ytSource))
+        }
+        let r = try await send("search3.view", params)
         return r.searchResult3 ?? SearchResult3(artist: nil, album: nil, song: nil)
     }
 
@@ -188,20 +198,67 @@ public struct SubsonicClient: Sendable {
 
     // MARK: - Save to Library (Geet-Hub proxy extension, not Subsonic)
 
+    /// Library folders the proxy/Antra know about — for the folder picker.
+    /// Returns an empty list against a proxy that predates this endpoint.
+    public func libraryFolders() async throws -> [String] {
+        let url = credentials.baseURL.appendingPathComponent("api/folders")
+        let (data, response) = try await session.data(from: url)
+        guard let http = response as? HTTPURLResponse else {
+            throw SubsonicClientError.badStatus(-1)
+        }
+        if http.statusCode == 404 { return [] }
+        guard (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus(http.statusCode)
+        }
+        struct FoldersResp: Decodable { let folders: [String] }
+        return (try JSONDecoder().decode(FoldersResp.self, from: data)).folders
+    }
+
     /// Ask subsonic-proxy to import a YouTube result into the real library
     /// (hybrid: clean Deezer link → Antra flac, else save the YouTube audio).
-    /// `id` is a `yt-<videoId>` from a search result. Fire-and-forget: the proxy
-    /// runs the download in the background and Navidrome picks it up on scan.
-    public func saveToLibrary(youtubeId: String) async throws {
+    /// Returns a `download_id` the app can poll via ``downloadStatus``. Older
+    /// proxy builds that don't return an id yield `nil` — caller should treat
+    /// that as fire-and-forget and skip polling.
+    @discardableResult
+    public func startSave(youtubeId: String, folder: String? = nil) async throws -> String? {
         var req = URLRequest(url: credentials.baseURL.appendingPathComponent("api/download"))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["id": youtubeId])
-        let (_, response) = try await session.data(for: req)
+        var body: [String: String] = ["id": youtubeId]
+        if let folder, !folder.isEmpty { body["folder"] = folder }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
         }
+        struct StartResp: Decodable { let download_id: String? }
+        return (try? JSONDecoder().decode(StartResp.self, from: data))?.download_id
     }
+
+    public func downloadStatus(downloadId: String) async throws -> DownloadStatus {
+        var comps = URLComponents(url: credentials.baseURL.appendingPathComponent("api/download/status"),
+                                  resolvingAgainstBaseURL: false)!
+        comps.queryItems = [.init(name: "id", value: downloadId)]
+        // Bypass URLCache — status polling depends on seeing the latest state,
+        // and a cached "queued/downloading" response would trap us in an
+        // infinite poll loop even after the proxy returns "done".
+        var req = URLRequest(url: comps.url!)
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        return try JSONDecoder().decode(DownloadStatus.self, from: data)
+    }
+}
+
+/// Progress for a save-to-library download started via ``SubsonicClient/startSave(youtubeId:folder:)``.
+public struct DownloadStatus: Sendable, Codable {
+    /// `queued` → `sourcing` → `downloading` or `saving-youtube` → `done` / `failed`.
+    public let state: String
+    public let percent: Int
+    public let detail: String
+    public var isTerminal: Bool { state == "done" || state == "failed" }
 }
 
 public enum SubsonicClientError: Error, Sendable {

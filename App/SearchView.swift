@@ -11,9 +11,10 @@ struct SearchView: View {
     @State private var songs: [Song] = []
     @State private var isSearching = false
     @State private var searchTask: Task<Void, Never>?
-    @State private var saved: Set<String> = []
     @State private var toast: String?
     @State private var recents: [String] = []
+    @State private var folders: [String] = []
+    @AppStorage("ytSearchSource") private var ytSource: String = "ytmusic"
 
     private let recentsKey = "recentSearches"
 
@@ -22,6 +23,7 @@ struct SearchView: View {
             VStack(spacing: 0) {
                 header
                 searchField
+                sourcePicker
                 content
             }
             .paperBackground()
@@ -30,7 +32,31 @@ struct SearchView: View {
         }
         .tint(Theme.accent)
         .onChange(of: query) { _, q in scheduleSearch(q) }
-        .task { loadRecents() }
+        .onChange(of: ytSource) { _, _ in scheduleSearch(query) }
+        .task {
+            loadRecents()
+            if folders.isEmpty, let client = session.client {
+                folders = (try? await client.libraryFolders()) ?? []
+            }
+        }
+    }
+
+    // Two chips: [YouTube] [YT Music] — persisted default via @AppStorage,
+    // shared with the "Search" card in Settings. Switching re-runs the query.
+    private var sourcePicker: some View {
+        HStack(spacing: 8) {
+            sourceChip("YouTube", value: "youtube")
+            sourceChip("YT Music", value: "ytmusic")
+            Spacer()
+        }
+        .padding(.horizontal, 20).padding(.bottom, 10)
+    }
+
+    private func sourceChip(_ title: String, value: String) -> some View {
+        Button { ytSource = value } label: {
+            Chip(title: title, filled: ytSource == value)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Header + field
@@ -128,13 +154,13 @@ struct SearchView: View {
                             player.play(songs, startAt: index)
                         } label: {
                             SongRow(song: song, isPlaying: player.current?.id == song.id,
-                                    favorited: !song.isYouTube && player.isFavorite(song))
+                                    favorited: !song.isVirtual && player.isFavorite(song))
                                 .padding(.leading, 20).padding(.vertical, 10)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        if song.isYouTube {
-                            saveButton(for: song).padding(.leading, 12).padding(.trailing, 14)
+                        if song.isVirtual {
+                            saveControl(for: song).padding(.leading, 12).padding(.trailing, 14)
                         } else {
                             SongMenuButton(song: song).padding(.trailing, 4)
                         }
@@ -176,20 +202,38 @@ struct SearchView: View {
 
     // MARK: - Save-to-Library + toast
 
-    @ViewBuilder private func saveButton(for song: Song) -> some View {
-        if saved.contains(song.id) {
+    @ViewBuilder private func saveControl(for song: Song) -> some View {
+        if player.savedYouTube.contains(song.id) {
             Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.accent)
-        } else {
-            Button { Task { await save(song) } } label: {
+        } else if let pct = player.downloads[song.id] {
+            ProgressRing(percent: pct).frame(width: 22, height: 22)
+        } else if player.failedDownloads.contains(song.id) {
+            Button { Task { await save(song, folder: nil) } } label: {
+                Image(systemName: "exclamationmark.arrow.circlepath")
+                    .font(.title3).foregroundStyle(.red)
+            }
+            .buttonStyle(.plain)
+        } else if folders.isEmpty {
+            Button { Task { await save(song, folder: nil) } } label: {
                 Image(systemName: "arrow.down.circle").font(.title3).foregroundStyle(Theme.accent)
             }
             .buttonStyle(.plain)
+        } else {
+            Menu {
+                Button("Library root") { Task { await save(song, folder: nil) } }
+                Divider()
+                ForEach(folders, id: \.self) { f in
+                    Button(f) { Task { await save(song, folder: f) } }
+                }
+            } label: {
+                Image(systemName: "arrow.down.circle").font(.title3).foregroundStyle(Theme.accent)
+            }
         }
     }
 
     @ViewBuilder private var toastView: some View {
         if let toast {
-            Text(toast).retro(11, .medium, color: .white, tracking: 1)
+            Text(toast).retro(11, .medium, color: Theme.paper, tracking: 1)
                 .padding(.horizontal, 16).padding(.vertical, 11)
                 .background(Theme.ink, in: Capsule())
                 .padding(.bottom, 120)
@@ -207,20 +251,54 @@ struct SearchView: View {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled, let client = session.client else { return }
             isSearching = true
-            let result = try? await client.search(text, songCount: 40)
+            let result = try? await client.search(text, songCount: 40, ytSource: ytSource)
             guard !Task.isCancelled else { return }
             songs = result?.song ?? []
             isSearching = false
         }
     }
 
-    private func save(_ song: Song) async {
+    private func save(_ song: Song, folder: String?) async {
         guard let client = session.client else { return }
+        player.startedDownload(song.id)
         do {
-            try await client.saveToLibrary(youtubeId: song.id)
-            saved.insert(song.id)
-            showToast("Saving “\(song.title)” to your library")
+            let downloadId = try await client.startSave(youtubeId: song.id, folder: folder)
+            let where_ = folder.map { " → \($0)" } ?? ""
+            showToast("Saving “\(song.title)”\(where_)")
+            guard let downloadId else {
+                // Old proxy — no polling available. Optimistically mark done.
+                player.finishedDownload(song.id, success: true)
+                return
+            }
+            var errors = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                do {
+                    let status = try await client.downloadStatus(downloadId: downloadId)
+                    errors = 0
+                    if status.state == "done" {
+                        player.finishedDownload(song.id, success: true)
+                        return
+                    }
+                    if status.state == "failed" {
+                        player.finishedDownload(song.id, success: false)
+                        showToast("Download failed")
+                        return
+                    }
+                    player.setDownloadProgress(song.id, percent: status.percent)
+                } catch {
+                    // Proxy container restart wipes the in-memory DOWNLOADS
+                    // dict — status polls come back 404 forever. Give up after
+                    // a handful of errors so the ring doesn't spin indefinitely.
+                    errors += 1
+                    if errors >= 5 {
+                        player.finishedDownload(song.id, success: false)
+                        return
+                    }
+                }
+            }
         } catch {
+            player.finishedDownload(song.id, success: false)
             showToast("Couldn't start the download")
         }
     }

@@ -17,7 +17,7 @@ struct RootView: View {
             }
         }
         .tint(theme.accent)
-        .preferredColorScheme(.light)   // the vinyl look is intentionally paper-light
+        .preferredColorScheme(theme.scheme.colorScheme)
         .task { await start() }
     }
 

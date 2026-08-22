@@ -55,13 +55,41 @@ struct AlbumShelf: View {
     }
 }
 
-/// The red "YouTube" tag used on song rows and the player.
-struct YouTubeTag: View {
+/// Red source tag used on song rows and the player — "YT" for YouTube search
+/// results, "YT Music" for ytmusicapi results.
+struct SourceTag: View {
+    let source: VirtualSource
     var body: some View {
-        Text("YouTube").retro(9, .semibold, color: .white, tracking: 1)
+        Text(source.shortLabel).retro(9, .semibold, color: .white, tracking: 1)
             .padding(.horizontal, 8).padding(.vertical, 3)
             .background(Color(red: 0.90, green: 0.13, blue: 0.13),
                         in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+    }
+}
+
+/// Thin accent-tinted progress ring for inline download progress.
+/// Renders indeterminate (spinning arc) when ``percent`` is 0, so the user
+/// always sees motion — even before the first status update lands.
+struct ProgressRing: View {
+    let percent: Int
+    @State private var spin = false
+    var body: some View {
+        let p = max(0, min(100, percent))
+        ZStack {
+            Circle().stroke(Theme.hairline, lineWidth: 2)
+            if p == 0 {
+                Circle().trim(from: 0, to: 0.25)
+                    .stroke(Theme.accent, style: .init(lineWidth: 2, lineCap: .round))
+                    .rotationEffect(.degrees(spin ? 360 : 0))
+                    .animation(.linear(duration: 0.9).repeatForever(autoreverses: false), value: spin)
+                    .onAppear { spin = true }
+            } else {
+                Circle().trim(from: 0, to: CGFloat(p) / 100)
+                    .stroke(Theme.accent, style: .init(lineWidth: 2, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeInOut(duration: 0.4), value: p)
+            }
+        }
     }
 }
 

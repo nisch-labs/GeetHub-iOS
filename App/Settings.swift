@@ -2,7 +2,18 @@
 import SwiftUI
 import GeetHubKit
 
+private let recentSearchesKey = "recentSearches"
+
+private var appVersion: String {
+    (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "?"
+}
+
 struct SettingsView: View {
+    @Environment(Session.self) private var session
+    @Environment(PlayerEngine.self) private var player
+    @Environment(ThemeManager.self) private var theme
+    @AppStorage("ytSearchSource") private var ytSource: String = "ytmusic"
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -12,33 +23,23 @@ struct SettingsView: View {
                         .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 4)
 
                     card("cylinder.split.1x2.fill", "Server & Account",
-                         "Server info, credentials, log out") { ServerAccountSettings() }
-                    card("paintpalette.fill", "Appearance & Layout",
-                         "Theme, accent color, sort order") { AppearanceSettings() }
-                    card("music.note", "Sound & Playback",
-                         "Streaming quality, player controls") {
-                        PlaceholderSettings(title: "Sound & Playback", icon: "music.note",
-                                            message: "Streaming and download quality options are on the way.")
+                         session.client?.credentials.baseURL.host ?? "Not signed in") {
+                        ServerAccountSettings()
                     }
-                    card("globe", "Connectivity",
-                         "Server URL, offline mode, certificates") {
-                        PlaceholderSettings(title: "Connectivity", icon: "globe",
-                                            message: "Offline mode and certificate options are coming soon.")
+                    card("paintpalette.fill", "Appearance & Layout",
+                         "\(theme.scheme.label) · \(theme.choice.label)") {
+                        AppearanceSettings()
+                    }
+                    card("magnifyingglass", "Search",
+                         ytSource == "youtube" ? "YouTube" : "YouTube Music") {
+                        SearchSourceSettings()
                     }
                     card("folder.fill", "Storage",
-                         "Cache, downloads, storage limits") {
-                        PlaceholderSettings(title: "Storage", icon: "folder.fill",
-                                            message: "Download and cache management arrives with offline support.")
-                    }
-                    card("books.vertical.fill", "Library & Data",
-                         "Listening history, backups, shares") {
-                        PlaceholderSettings(title: "Library & Data", icon: "books.vertical.fill",
-                                            message: "History, backups and sharing are planned for a later update.")
-                    }
+                         "Caches, recent searches, history") { StorageSettings() }
                     card("questionmark.circle.fill", "Help & Welcome Guide",
                          "Gestures, features, and tips") { HelpSettings() }
 
-                    Text("Geet-Hub · Version 0.1")
+                    Text("Geet-Hub · Version \(appVersion)")
                         .retro(9, .light, color: Theme.graphite, tracking: 1.5)
                         .padding(.top, 14)
                 }
@@ -78,6 +79,7 @@ struct SettingsView: View {
 
 struct ServerAccountSettings: View {
     @Environment(Session.self) private var session
+    @State private var confirmSignOut = false
 
     var body: some View {
         ScrollView {
@@ -89,17 +91,23 @@ struct ServerAccountSettings: View {
                     if let user = session.client?.credentials.username {
                         row("User", user); divider
                     }
-                    row("Version", "0.1")
+                    row("Version", appVersion)
                 }
                 .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
                 .padding(.horizontal, 20).padding(.top, 12)
 
-                Button { session.signOut() } label: {
+                Button { confirmSignOut = true } label: {
                     Text("Log out").retro(14, .semibold, color: .white, tracking: 2)
                         .frame(maxWidth: .infinity).padding(.vertical, 14).background(Theme.accent)
                 }
                 .padding(.horizontal, 20)
+                .confirmationDialog("Log out of Geet-Hub?", isPresented: $confirmSignOut, titleVisibility: .visible) {
+                    Button("Log out", role: .destructive) { session.signOut() }
+                    Button("Cancel", role: .cancel) { }
+                } message: {
+                    Text("Your server URL and password will be cleared from this device.")
+                }
             }
             .padding(.bottom, 40)
         }
@@ -126,32 +134,227 @@ struct AppearanceSettings: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Accent color").retro(12, .medium, color: Theme.graphite, tracking: 1.5)
-                    .padding(.horizontal, 4)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
-                        ForEach(AccentChoice.allCases) { choice in
-                            Button { theme.choice = choice } label: {
-                                Circle().fill(choice.color).frame(width: 36, height: 36)
-                                    .overlay(Circle().strokeBorder(Theme.ink, lineWidth: theme.choice == choice ? 2.5 : 0).padding(-4))
-                                    .overlay(Image(systemName: "checkmark").font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(.white).opacity(theme.choice == choice ? 1 : 0))
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Appearance").retro(12, .medium, color: Theme.graphite, tracking: 1.5)
+                        .padding(.horizontal, 4)
+                    HStack(spacing: 10) {
+                        ForEach(ColorSchemeChoice.allCases) { option in
+                            let selected = theme.scheme == option
+                            Button { theme.scheme = option } label: {
+                                Text(option.label)
+                                    .retro(12, .semibold,
+                                           color: selected ? .white : Theme.ink,
+                                           tracking: 1.5)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(selected ? Theme.accent : Theme.surface,
+                                                in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .strokeBorder(selected ? Theme.accent : Theme.hairline, lineWidth: 1))
                             }
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.vertical, 4).padding(.horizontal, 2)
                 }
+                .padding(18)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Accent color").retro(12, .medium, color: Theme.graphite, tracking: 1.5)
+                        .padding(.horizontal, 4)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 16) {
+                            ForEach(AccentChoice.allCases) { choice in
+                                Button { theme.choice = choice } label: {
+                                    Circle().fill(choice.color).frame(width: 36, height: 36)
+                                        .overlay(Circle().strokeBorder(Theme.ink, lineWidth: theme.choice == choice ? 2.5 : 0).padding(-4))
+                                        .overlay(Image(systemName: "checkmark").font(.system(size: 13, weight: .bold))
+                                            .foregroundStyle(.white).opacity(theme.choice == choice ? 1 : 0))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.vertical, 4).padding(.horizontal, 2)
+                    }
+                }
+                .padding(18)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
             }
-            .padding(18)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
             .padding(.horizontal, 20).padding(.top, 12)
         }
         .paperBackground()
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { detailTitle("Appearance & Layout") }
+    }
+}
+
+// MARK: - Search source
+
+struct SearchSourceSettings: View {
+    @AppStorage("ytSearchSource") private var ytSource: String = "ytmusic"
+
+    private struct Option: Identifiable {
+        let id: String
+        let label: String
+        let blurb: String
+    }
+    private let options: [Option] = [
+        .init(id: "ytmusic", label: "YouTube Music",
+              blurb: "Song-only results with real artist / album metadata. Cleaner. Occasionally misses obscure uploads."),
+        .init(id: "youtube", label: "YouTube",
+              blurb: "Full site search. Broader coverage — also includes lyric videos, karaoke and covers.")
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                ForEach(options) { opt in
+                    let selected = ytSource == opt.id
+                    Button { ytSource = opt.id } label: {
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                                .font(.title3).foregroundStyle(selected ? Theme.accent : Theme.graphite)
+                                .padding(.top, 2)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(opt.label).retro(13, .semibold)
+                                Text(opt.blurb).font(.footnote).foregroundStyle(Theme.graphite)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(16)
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(selected ? Theme.accent : Theme.hairline, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Text("The Search tab has a quick toggle for the same setting.")
+                    .retro(9, .light, color: Theme.graphite, tracking: 1.5)
+                    .padding(.top, 10)
+            }
+            .padding(.horizontal, 20).padding(.top, 12)
+        }
+        .paperBackground()
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { detailTitle("Search") }
+    }
+}
+
+// MARK: - Storage
+
+struct StorageSettings: View {
+    @Environment(PlayerEngine.self) private var player
+    @State private var recentSearchesCount = 0
+    @State private var cacheBytes = 0
+    @State private var pending: Action?
+
+    private enum Action: Identifiable {
+        case recentSearches, recentlyPlayed, artworkCache, youtubeTags
+        var id: Int { hashValue }
+        var title: String {
+            switch self {
+            case .recentSearches: return "Clear recent searches?"
+            case .recentlyPlayed: return "Clear recently played?"
+            case .artworkCache:   return "Clear artwork cache?"
+            case .youtubeTags:    return "Forget saved YouTube tags?"
+            }
+        }
+        var confirm: String { "Clear" }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                itemRow("magnifyingglass", "Recent searches",
+                        detail: "\(recentSearchesCount) saved",
+                        action: .recentSearches)
+                divider
+                itemRow("clock.arrow.circlepath", "Recently played",
+                        detail: "\(player.recentlyPlayed.count) songs",
+                        action: .recentlyPlayed)
+                divider
+                itemRow("photo.stack", "Artwork cache",
+                        detail: cacheSummary,
+                        action: .artworkCache)
+                divider
+                itemRow("arrow.down.circle", "Saved YouTube tags",
+                        detail: "\(player.savedYouTube.count) marked saved this session",
+                        action: .youtubeTags)
+            }
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+            .padding(.horizontal, 20).padding(.top, 12)
+
+            Text("Storage settings only affect this device.")
+                .retro(9, .light, color: Theme.graphite, tracking: 1.5)
+                .padding(.top, 14)
+        }
+        .paperBackground()
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { detailTitle("Storage") }
+        .task { refresh() }
+        .confirmationDialog(pending?.title ?? "", isPresented: Binding(
+            get: { pending != nil },
+            set: { if !$0 { pending = nil } }
+        ), titleVisibility: .visible) {
+            if let p = pending {
+                Button(p.confirm, role: .destructive) { perform(p) }
+                Button("Cancel", role: .cancel) { }
+            }
+        }
+    }
+
+    private var divider: some View { Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, 54) }
+
+    private var cacheSummary: String {
+        let mb = Double(cacheBytes) / (1024 * 1024)
+        return mb < 0.1 ? "empty" : String(format: "%.1f MB", mb)
+    }
+
+    private func itemRow(_ icon: String, _ title: String, detail: String, action: Action) -> some View {
+        Button { pending = action } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon).font(.system(size: 15)).foregroundStyle(Theme.accent).frame(width: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).retro(13, .medium)
+                    Text(detail).retro(9, .light, color: Theme.graphite, tracking: 1).lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "trash").font(.footnote).foregroundStyle(Theme.graphite)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func refresh() {
+        if let data = UserDefaults.standard.data(forKey: recentSearchesKey),
+           let arr = try? JSONDecoder().decode([String].self, from: data) {
+            recentSearchesCount = arr.count
+        } else {
+            recentSearchesCount = 0
+        }
+        cacheBytes = URLCache.shared.currentDiskUsage + URLCache.shared.currentMemoryUsage
+    }
+
+    private func perform(_ action: Action) {
+        switch action {
+        case .recentSearches:
+            UserDefaults.standard.removeObject(forKey: recentSearchesKey)
+        case .recentlyPlayed:
+            player.clearRecentlyPlayed()
+        case .artworkCache:
+            URLCache.shared.removeAllCachedResponses()
+        case .youtubeTags:
+            player.clearSavedYouTube()
+        }
+        refresh()
     }
 }
 
@@ -182,24 +385,5 @@ struct HelpSettings: View {
         .padding(16)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
-    }
-}
-
-// MARK: - Placeholder
-
-struct PlaceholderSettings: View {
-    let title: String
-    let icon: String
-    let message: String
-
-    var body: some View {
-        ContentUnavailableView {
-            Label(title, systemImage: icon)
-        } description: {
-            Text(message)
-        }
-        .paperBackground()
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { detailTitle(title) }
     }
 }

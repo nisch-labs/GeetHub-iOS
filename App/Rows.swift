@@ -3,11 +3,13 @@ import SwiftUI
 import GeetHubKit
 
 struct SongRow: View {
+    @Environment(PlayerEngine.self) private var player
     let song: Song
     var isPlaying: Bool = false
     var favorited: Bool = false
 
     var body: some View {
+        let tagSource = player.savedYouTube.contains(song.id) ? nil : song.virtualSource
         HStack(spacing: 12) {
             ArtworkImage(coverArt: song.coverArt, size: 44, shape: .sleeve)
             VStack(alignment: .leading, spacing: 3) {
@@ -24,8 +26,8 @@ struct SongRow: View {
             if favorited {
                 Image(systemName: "heart.fill").font(.caption2).foregroundStyle(Theme.accent)
             }
-            if song.isYouTube {
-                YouTubeTag()
+            if let tagSource {
+                SourceTag(source: tagSource)
             } else if let d = song.duration {
                 Text(Self.time(d))
                     .font(.system(.caption, design: .monospaced))

@@ -18,33 +18,71 @@ struct MainTabView: View {
                 // bottom accessory, and a tab bar that minimizes on scroll — the
                 // Apple Music behaviour. .id(theme.choice) re-tints on accent change.
                 TabView(selection: $selectedTab) {
-                    Tab("", systemImage: "house", value: 0) {
+                    // Labels are needed for iPad / Mac Catalyst — iOS 26
+                    // TabView renders tabs as a sidebar/toolbar there, and
+                    // sidebar items must have a text label. On iPhone the
+                    // native tab bar shows icon-only when the label is short.
+                    Tab("Home", systemImage: "house", value: 0) {
                         HomeView(onSelectTab: { selectedTab = $0 }).id(theme.choice)
                     }
-                    Tab("", systemImage: "square.stack", value: 1) {
+                    Tab("Library", systemImage: "square.stack", value: 1) {
                         LibraryView().id(theme.choice)
                     }
-                    Tab("", systemImage: "heart", value: 2) {
+                    Tab("Favourites", systemImage: "heart", value: 2) {
                         FavoritesView().id(theme.choice)
                     }
-                    Tab("", systemImage: "magnifyingglass", value: 3) {
+                    Tab("Search", systemImage: "magnifyingglass", value: 3) {
                         SearchView().id(theme.choice)
                     }
-                    Tab("", systemImage: "gearshape", value: 4) {
+                    Tab("Settings", systemImage: "gearshape", value: 4) {
                         SettingsView().id(theme.choice)
                     }
                 }
+                // iOS 26 has a minimising tab bar + native bottom-accessory
+                // slot. On Mac Catalyst neither exists, so we render the mini
+                // player ourselves via overlay. Environment is injected right
+                // on the accessory to avoid a SwiftUI env-propagation crash we
+                // saw when relying on inherited environments through
+                // safeAreaInset on Catalyst.
+                #if !targetEnvironment(macCatalyst)
                 .tabBarMinimizeBehavior(.onScrollDown)
                 .tabViewBottomAccessory {
                     NowPlayingAccessory(onTap: { showPlayer = true })
                 }
+                #else
+                .overlay(alignment: .bottom) {
+                    NowPlayingAccessory(onTap: { showPlayer = true })
+                        .environment(player)
+                        .environment(picker)
+                        .environment(playlistFavs)
+                        .frame(height: 56)
+                        .padding(.horizontal, 16)
+                        .background(.regularMaterial)
+                        .overlay(Rectangle().fill(Theme.hairline).frame(height: 1), alignment: .top)
+                }
+                #endif
                 .environment(player)
                 .environment(picker)
                 .environment(playlistFavs)
                 .tint(theme.accent)
+                // Full player: fullScreenCover on iPhone/iPad; on Mac Catalyst
+                // that presentation style is unreliable and was crashing during
+                // env resolution — .sheet is the native Mac modal anyway.
+                #if targetEnvironment(macCatalyst)
+                .sheet(isPresented: $showPlayer) {
+                    FullPlayerView()
+                        .environment(session)
+                        .environment(theme)
+                        .environment(player)
+                        .environment(picker)
+                        .environment(playlistFavs)
+                        .frame(minWidth: 420, minHeight: 640)
+                }
+                #else
                 .fullScreenCover(isPresented: $showPlayer) {
                     FullPlayerView().environment(player).environment(picker)
                 }
+                #endif
                 .sheet(item: $picker.song) { song in
                     AddToPlaylistSheet(song: song)
                 }

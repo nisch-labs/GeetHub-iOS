@@ -61,9 +61,29 @@ public struct Song: Codable, Sendable, Identifiable, Hashable {
     /// Present (a date string) when the item is starred/favorited.
     public let starred: String?
 
-    /// A virtual YouTube track injected by subsonic-proxy (id like `yt-<videoId>`).
-    public var isYouTube: Bool { id.hasPrefix("yt-") }
+    /// The provenance of a virtual track injected by subsonic-proxy — encoded
+    /// as an id prefix (`yt-` for YouTube search, `ytm-` for YouTube Music).
+    /// `nil` for real library songs.
+    public var virtualSource: VirtualSource? {
+        if id.hasPrefix("ytm-") { return .youtubeMusic }
+        if id.hasPrefix("yt-")  { return .youtube }
+        return nil
+    }
+    public var isVirtual: Bool { virtualSource != nil }
+    /// Backward-compat alias for the original yt- prefix (regular YouTube).
+    public var isYouTube: Bool { virtualSource == .youtube }
+    public var isYouTubeMusic: Bool { virtualSource == .youtubeMusic }
     public var isFavorite: Bool { starred != nil }
+}
+
+public enum VirtualSource: String, Sendable {
+    case youtube, youtubeMusic
+    public var shortLabel: String {
+        switch self {
+        case .youtube:      return "YT"
+        case .youtubeMusic: return "YT Music"
+        }
+    }
 }
 
 public struct Album: Decodable, Sendable, Identifiable, Hashable {
