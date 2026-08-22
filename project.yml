@@ -38,5 +38,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "6.0"
-        # Simulator runs don't need signing.
-        CODE_SIGNING_ALLOWED: "NO"
+        # Personal team (NISCHAL NIROULA) — automatic signing for device installs.
+        # The simulator ignores this and builds unsigned regardless.
+        DEVELOPMENT_TEAM: J27CK6TLVS
+        CODE_SIGN_STYLE: Automatic
