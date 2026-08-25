@@ -2,6 +2,7 @@
 import Foundation
 import AVFoundation
 import MediaPlayer
+import UIKit
 import GeetHubKit
 
 @MainActor
@@ -166,6 +167,12 @@ final class PlayerEngine {
         observeItemEnd()
         setupRemoteCommands()
         loadRecentlyPlayed()
+        // Enable remote-control event routing. On Mac Catalyst this is what
+        // makes the F7/F8/F9 media keys reach MPRemoteCommandCenter — without
+        // it, macOS ignores us in favour of Music.app / Spotify / whoever last
+        // played. Deprecated on iOS 13+ (superseded by MPRemoteCommandCenter
+        // targets, which we also set up) but still required for key routing.
+        UIApplication.shared.beginReceivingRemoteControlEvents()
     }
 
     // MARK: - Controls
@@ -253,15 +260,27 @@ final class PlayerEngine {
 
     private func setupRemoteCommands() {
         let c = MPRemoteCommandCenter.shared()
-        c.playCommand.addTarget { [weak self] _ in self?.togglePlayPause(); return .success }
-        c.pauseCommand.addTarget { [weak self] _ in self?.togglePlayPause(); return .success }
+        c.playCommand.addTarget { [weak self] _ in
+            if let self, !self.isPlaying { self.togglePlayPause() }
+            return .success
+        }
+        c.pauseCommand.addTarget { [weak self] _ in
+            if let self, self.isPlaying { self.togglePlayPause() }
+            return .success
+        }
+        // Mac's F8 / headphones send togglePlayPauseCommand specifically.
+        c.togglePlayPauseCommand.addTarget { [weak self] _ in
+            self?.togglePlayPause(); return .success
+        }
         c.nextTrackCommand.addTarget { [weak self] _ in self?.next(); return .success }
         c.previousTrackCommand.addTarget { [weak self] _ in self?.previous(); return .success }
     }
 
     private func updateNowPlaying() {
+        let center = MPNowPlayingInfoCenter.default()
         guard let song = current else {
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            center.nowPlayingInfo = nil
+            center.playbackState = .stopped
             return
         }
         var info: [String: Any] = [
@@ -272,6 +291,9 @@ final class PlayerEngine {
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
         ]
         if let album = song.album { info[MPMediaItemPropertyAlbumTitle] = album }
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        center.nowPlayingInfo = info
+        // Explicit playbackState is what macOS uses to decide who owns the
+        // media keys (F7/F8/F9) and appears in Control Center's Now Playing.
+        center.playbackState = isPlaying ? .playing : .paused
     }
 }

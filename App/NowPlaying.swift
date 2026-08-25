@@ -15,6 +15,9 @@ struct NowPlayingAccessory: View {
     private var isInline: Bool { false }
     #endif
     var onTap: () -> Void = {}
+    /// If provided, a small "sidebar.right" button appears at the trailing edge.
+    /// Used on iPad + Mac Catalyst to dock the full player to the right pane.
+    var onDock: (() -> Void)? = nil
 
     var body: some View {
         Button {
@@ -50,6 +53,13 @@ struct NowPlayingAccessory: View {
                 } else {
                     Image(systemName: "play.fill").font(.body).foregroundStyle(Theme.graphite)
                 }
+                if let onDock {
+                    Button { onDock() } label: {
+                        Image(systemName: "sidebar.right").foregroundStyle(Theme.graphite)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, 6)
+                }
             }
             .padding(.horizontal, 12)
             .frame(maxWidth: .infinity)
@@ -78,6 +88,10 @@ struct FullPlayerView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showLyrics = false
     @State private var showQueue = false
+    /// When non-nil, the header's leading button becomes an undock (xmark)
+    /// action instead of the modal-dismiss chevron. Used by the docked pane
+    /// on iPad + Mac Catalyst.
+    var onClose: (() -> Void)? = nil
 
     private var progress: Double {
         guard player.duration > 0 else { return 0 }
@@ -103,8 +117,10 @@ struct FullPlayerView: View {
     // Header: back · (spacer) · favorite/download · menu
     private var header: some View {
         HStack(spacing: 16) {
-            Button { dismiss() } label: {
-                Image(systemName: "chevron.down").font(.headline)
+            Button {
+                if let onClose { onClose() } else { dismiss() }
+            } label: {
+                Image(systemName: onClose != nil ? "xmark" : "chevron.down").font(.headline)
             }
             Spacer()
             if player.current?.isVirtual == true {

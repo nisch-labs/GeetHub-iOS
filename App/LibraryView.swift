@@ -34,15 +34,15 @@ struct LibraryView: View {
                 }
                 .padding(.horizontal, 20).padding(.top, 8)
 
-                SegmentedBar(options: ["Songs", "Albums", "Artists", "Playlists"], selection: $tab)
+                SegmentedBar(options: ["Songs", "Playlists", "Albums", "Artists"], selection: $tab)
 
                 ScrollView {
                     Group {
                         switch tab {
                         case 0: SongList(songs: sortedSongs)
-                        case 1: albumGrid
-                        case 2: artistList
-                        default: playlistList
+                        case 1: playlistList
+                        case 2: albumGrid
+                        default: artistList
                         }
                     }
                     .padding(.bottom, 120)
@@ -107,9 +107,7 @@ struct LibraryView: View {
                 HStack(spacing: 0) {
                     NavigationLink(value: playlist) {
                         HStack(spacing: 14) {
-                            RoundedRectangle(cornerRadius: 0).fill(Theme.surface).frame(width: 44, height: 44)
-                                .overlay(Rectangle().strokeBorder(Theme.hairline, lineWidth: 1))
-                                .overlay(Image(systemName: "music.note.list").foregroundStyle(Theme.graphite))
+                            playlistArt(playlist)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(playlist.name).retro(15, .medium).lineLimit(1)
                                 if let n = playlist.songCount {
@@ -132,6 +130,17 @@ struct LibraryView: View {
             }
         }
         .padding(.top, 4)
+    }
+
+    @ViewBuilder private func playlistArt(_ playlist: Playlist) -> some View {
+        if let art = playlist.coverArt {
+            ArtworkImage(coverArt: art, size: 44, shape: .sleeve, corner: 6)
+        } else {
+            RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.surface)
+                .frame(width: 44, height: 44)
+                .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+                .overlay(Image(systemName: "music.note.list").foregroundStyle(Theme.graphite))
+        }
     }
 
     private var sortMenu: some View {

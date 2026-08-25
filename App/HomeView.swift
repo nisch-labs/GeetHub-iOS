@@ -61,7 +61,6 @@ struct HomeView: View {
             }
             Spacer()
             roundButton("magnifyingglass") { onSelectTab(3) }
-            roundButton("gearshape") { onSelectTab(4) }
         }
         .padding(.horizontal, 20)
     }
@@ -90,17 +89,31 @@ struct HomeView: View {
 
     private var curated: some View {
         VStack(alignment: .leading, spacing: 14) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    CompactCard(title: "Discover", subtitle: "A fresh shuffle", filled: false, icon: "shuffle") {
-                        Task { await shuffleAll() }
-                    }
-                    CompactCard(title: "Rediscover", subtitle: "A random album", filled: false, icon: "opticaldisc") {
-                        Task { await playRandomAlbum() }
-                    }
+            SectionHeader(title: "Smart Play")
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10),
+                                GridItem(.flexible(), spacing: 10),
+                                GridItem(.flexible(), spacing: 10)],
+                      spacing: 10) {
+                CompactCard(title: "Discover", subtitle: "Fresh shuffle", icon: "shuffle") {
+                    Task { await shuffleAll() }
                 }
-                .padding(.horizontal, 20)
+                CompactCard(title: "Rediscover", subtitle: "Random album", icon: "opticaldisc") {
+                    Task { await playRandomAlbum() }
+                }
+                CompactCard(title: "On Repeat", subtitle: "Top plays", icon: "flame") {
+                    Task { await playOnRepeat() }
+                }
+                CompactCard(title: "Deep Cuts", subtitle: "Never played", icon: "sparkles") {
+                    Task { await playDeepCuts() }
+                }
+                CompactCard(title: "Favourites", subtitle: "Shuffle stars", icon: "heart.fill") {
+                    Task { await playFavouritesMix() }
+                }
+                CompactCard(title: "Roulette", subtitle: "Random playlist", icon: "music.note.list") {
+                    Task { await playRandomPlaylist() }
+                }
             }
+            .padding(.horizontal, 20)
         }
     }
 
@@ -227,37 +240,67 @@ struct HomeView: View {
               let songs = try? await c.album(id: album.id)?.song, !songs.isEmpty else { return }
         player.play(songs, startAt: 0)
     }
+    private func playOnRepeat() async {
+        // mostListened is already sorted by playCount desc when Home loads.
+        // Take the top 50 and shuffle client-side for variety within top plays.
+        let top = Array(mostListened.prefix(50)).shuffled()
+        guard !top.isEmpty else { return }
+        player.play(top, startAt: 0)
+    }
+    private func playDeepCuts() async {
+        // Songs the user has never played — from the same allSongs(500) page.
+        // Best-effort: on very large libraries this may miss unloved tracks
+        // outside the page. Good enough for a serendipity button.
+        guard let c = session.client else { return }
+        let all = (try? await c.allSongs(size: 500)) ?? []
+        let unplayed = all.filter { ($0.playCount ?? 0) == 0 }.shuffled()
+        guard !unplayed.isEmpty else { return }
+        player.play(Array(unplayed.prefix(50)), startAt: 0)
+    }
+    private func playFavouritesMix() async {
+        // Reuse the favourites already loaded on Home; refresh in case the
+        // user has starred more since load.
+        guard let c = session.client else { return }
+        let fresh = (try? await c.favorites())?.song ?? favorites
+        let mixed = fresh.shuffled()
+        guard !mixed.isEmpty else { return }
+        player.play(mixed, startAt: 0)
+    }
+    private func playRandomPlaylist() async {
+        guard let c = session.client,
+              let pl = allPlaylists.randomElement(),
+              let songs = try? await c.playlist(id: pl.id)?.entry, !songs.isEmpty else { return }
+        player.play(songs, startAt: 0)
+    }
 }
 
 // MARK: - Home components
 
-/// Compact curated card (small, like a tab).
+/// Compact tile used in the Smart Play 3-column grid on Home.
 private struct CompactCard: View {
     let title: String
     let subtitle: String
-    let filled: Bool
     let icon: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon).font(.system(size: 18))
-                    .foregroundStyle(filled ? .white : Theme.accent)
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(.system(size: 16))
+                    .foregroundStyle(Theme.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).retro(15, .bold, color: filled ? .white : Theme.ink, tracking: 0.5)
-                    Text(subtitle).retro(9, .regular, color: filled ? .white.opacity(0.9) : Theme.graphite, tracking: 0.5)
+                    Text(title).retro(11, .bold, color: Theme.ink, tracking: 0.5)
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                    Text(subtitle).retro(8, .regular, color: Theme.graphite, tracking: 0.5)
+                        .lineLimit(1).minimumScaleFactor(0.8)
                 }
-                Spacer(minLength: 8)
-                Image(systemName: "play.fill").font(.system(size: 12))
-                    .foregroundStyle(filled ? .white : Theme.accent)
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 16).padding(.vertical, 14)
-            .frame(width: 230)
-            .background(filled ? Theme.accent : Theme.surface,
-                        in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(filled ? .clear : Theme.hairline, lineWidth: 1))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10).padding(.vertical, 10)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Theme.hairline, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }

@@ -5,84 +5,46 @@ import GeetHubKit
 struct MainTabView: View {
     @Environment(Session.self) private var session
     @Environment(ThemeManager.self) private var theme
+    @Environment(\.horizontalSizeClass) private var hSize
     @State private var player: PlayerEngine?
     @State private var picker = PlaylistPicker()
     @State private var playlistFavs = PlaylistFavorites()
     @State private var showPlayer = false
+    @State private var dockPlayer = false
     @State private var selectedTab = 0
+
+    /// The dock affordance only makes sense on regular-width devices — Mac
+    /// Catalyst always, iPad in regular horizontal size class. iPhone is too
+    /// narrow to split; it keeps the mini-player + sheet flow.
+    private var canDock: Bool {
+        #if targetEnvironment(macCatalyst)
+        return true
+        #else
+        return hSize == .regular
+        #endif
+    }
 
     var body: some View {
         Group {
             if let player {
-                // Native iOS 26: labeled tabs, a Search role tab, a now-playing
-                // bottom accessory, and a tab bar that minimizes on scroll — the
-                // Apple Music behaviour. .id(theme.choice) re-tints on accent change.
-                TabView(selection: $selectedTab) {
-                    // Labels are needed for iPad / Mac Catalyst — iOS 26
-                    // TabView renders tabs as a sidebar/toolbar there, and
-                    // sidebar items must have a text label. On iPhone the
-                    // native tab bar shows icon-only when the label is short.
-                    Tab("Home", systemImage: "house", value: 0) {
-                        HomeView(onSelectTab: { selectedTab = $0 }).id(theme.choice)
-                    }
-                    Tab("Library", systemImage: "square.stack", value: 1) {
-                        LibraryView().id(theme.choice)
-                    }
-                    Tab("Favourites", systemImage: "heart", value: 2) {
-                        FavoritesView().id(theme.choice)
-                    }
-                    Tab("Search", systemImage: "magnifyingglass", value: 3) {
-                        SearchView().id(theme.choice)
-                    }
-                    Tab("Settings", systemImage: "gearshape", value: 4) {
-                        SettingsView().id(theme.choice)
-                    }
-                }
-                // iOS 26 has a minimising tab bar + native bottom-accessory
-                // slot. On Mac Catalyst neither exists, so we render the mini
-                // player ourselves via overlay. Environment is injected right
-                // on the accessory to avoid a SwiftUI env-propagation crash we
-                // saw when relying on inherited environments through
-                // safeAreaInset on Catalyst.
-                #if !targetEnvironment(macCatalyst)
-                .tabBarMinimizeBehavior(.onScrollDown)
-                .tabViewBottomAccessory {
-                    NowPlayingAccessory(onTap: { showPlayer = true })
-                }
-                #else
-                .overlay(alignment: .bottom) {
-                    NowPlayingAccessory(onTap: { showPlayer = true })
-                        .environment(player)
-                        .environment(picker)
-                        .environment(playlistFavs)
-                        .frame(height: 56)
-                        .padding(.horizontal, 16)
-                        .background(.regularMaterial)
-                        .overlay(Rectangle().fill(Theme.hairline).frame(height: 1), alignment: .top)
-                }
-                #endif
-                .environment(player)
-                .environment(picker)
-                .environment(playlistFavs)
-                .tint(theme.accent)
-                // Full player: fullScreenCover on iPhone/iPad; on Mac Catalyst
-                // that presentation style is unreliable and was crashing during
-                // env resolution — .sheet is the native Mac modal anyway.
-                #if targetEnvironment(macCatalyst)
-                .sheet(isPresented: $showPlayer) {
-                    FullPlayerView()
+                HStack(spacing: 0) {
+                    tabShell(player: player)
+                        .frame(maxWidth: .infinity)
+                    if canDock && dockPlayer {
+                        Divider()
+                        FullPlayerView(onClose: {
+                            withAnimation(.easeInOut(duration: 0.22)) { dockPlayer = false }
+                        })
                         .environment(session)
                         .environment(theme)
                         .environment(player)
                         .environment(picker)
                         .environment(playlistFavs)
-                        .frame(minWidth: 420, minHeight: 640)
+                        .frame(width: 440)
+                        .transition(.move(edge: .trailing))
+                    }
                 }
-                #else
-                .fullScreenCover(isPresented: $showPlayer) {
-                    FullPlayerView().environment(player).environment(picker)
-                }
-                #endif
+                .animation(.easeInOut(duration: 0.22), value: dockPlayer)
                 .sheet(item: $picker.song) { song in
                     AddToPlaylistSheet(song: song)
                 }
@@ -99,6 +61,83 @@ struct MainTabView: View {
             if let t = ProcessInfo.processInfo.environment["GEETHUB_TAB"], let i = Int(t) { selectedTab = i }
             #endif
         }
+    }
+
+    @ViewBuilder
+    private func tabShell(player: PlayerEngine) -> some View {
+        // Native iOS 26: icon-only tabs on iPhone, labelled on iPad/Mac (where
+        // iOS 26 renders a sidebar and blank items would look broken).
+        // .id(theme.choice) re-tints on accent change.
+        let isWide = hSize == .regular
+        TabView(selection: $selectedTab) {
+            Tab(isWide ? "Home" : "", systemImage: "house", value: 0) {
+                HomeView(onSelectTab: { selectedTab = $0 }).id(theme.choice)
+            }
+            Tab(isWide ? "Library" : "", systemImage: "square.stack", value: 1) {
+                LibraryView().id(theme.choice)
+            }
+            Tab(isWide ? "Favourites" : "", systemImage: "heart", value: 2) {
+                FavoritesView().id(theme.choice)
+            }
+            Tab(isWide ? "Search" : "", systemImage: "magnifyingglass", value: 3) {
+                SearchView().id(theme.choice)
+            }
+            Tab(isWide ? "Settings" : "", systemImage: "gearshape", value: 4) {
+                SettingsView().id(theme.choice)
+            }
+        }
+        // iOS 26 has a minimising tab bar + native bottom-accessory slot for
+        // the mini player. On Mac Catalyst neither exists, so we render the
+        // mini player ourselves via overlay. On both platforms we hide the
+        // mini player when the docked pane is showing (it'd be redundant).
+        #if !targetEnvironment(macCatalyst)
+        .tabBarMinimizeBehavior(.onScrollDown)
+        .tabViewBottomAccessory {
+            if !(canDock && dockPlayer) {
+                NowPlayingAccessory(
+                    onTap: { showPlayer = true },
+                    onDock: canDock ? { withAnimation(.easeInOut(duration: 0.22)) { dockPlayer = true } } : nil
+                )
+            }
+        }
+        #else
+        .overlay(alignment: .bottom) {
+            if !dockPlayer {
+                NowPlayingAccessory(
+                    onTap: { showPlayer = true },
+                    onDock: { withAnimation(.easeInOut(duration: 0.22)) { dockPlayer = true } }
+                )
+                .environment(player)
+                .environment(picker)
+                .environment(playlistFavs)
+                .frame(height: 56)
+                .padding(.horizontal, 16)
+                .background(.regularMaterial)
+                .overlay(Rectangle().fill(Theme.hairline).frame(height: 1), alignment: .top)
+            }
+        }
+        #endif
+        .environment(player)
+        .environment(picker)
+        .environment(playlistFavs)
+        .tint(theme.accent)
+        // Full player as a modal (fullScreenCover on iPhone/iPad,
+        // sheet on Mac Catalyst where fullScreenCover crashed on env resolution).
+        #if targetEnvironment(macCatalyst)
+        .sheet(isPresented: $showPlayer) {
+            FullPlayerView()
+                .environment(session)
+                .environment(theme)
+                .environment(player)
+                .environment(picker)
+                .environment(playlistFavs)
+                .frame(minWidth: 420, minHeight: 640)
+        }
+        #else
+        .fullScreenCover(isPresented: $showPlayer) {
+            FullPlayerView().environment(player).environment(picker)
+        }
+        #endif
     }
 
     private func demoIfRequested(_ player: PlayerEngine) async {
