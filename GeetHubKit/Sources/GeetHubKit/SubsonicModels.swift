@@ -74,6 +74,29 @@ public struct Song: Codable, Sendable, Identifiable, Hashable {
     public var isYouTube: Bool { virtualSource == .youtube }
     public var isYouTubeMusic: Bool { virtualSource == .youtubeMusic }
     public var isFavorite: Bool { starred != nil }
+
+    /// Convenience initializer — public structs don't get a synthesised
+    /// memberwise init, so callers outside GeetHubKit (e.g. PlayerEngine
+    /// reconstructing a track from a device transfer payload) need this.
+    public init(
+        id: String, title: String,
+        album: String? = nil, albumId: String? = nil,
+        artist: String? = nil, artistId: String? = nil,
+        coverArt: String? = nil, duration: Int? = nil,
+        track: Int? = nil, year: Int? = nil,
+        size: Int? = nil, suffix: String? = nil,
+        contentType: String? = nil, isVideo: Bool? = nil,
+        created: String? = nil, playCount: Int? = nil, starred: String? = nil,
+    ) {
+        self.id = id; self.title = title
+        self.album = album; self.albumId = albumId
+        self.artist = artist; self.artistId = artistId
+        self.coverArt = coverArt; self.duration = duration
+        self.track = track; self.year = year
+        self.size = size; self.suffix = suffix
+        self.contentType = contentType; self.isVideo = isVideo
+        self.created = created; self.playCount = playCount; self.starred = starred
+    }
 }
 
 public enum VirtualSource: String, Sendable {

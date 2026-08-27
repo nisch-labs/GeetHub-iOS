@@ -34,6 +34,8 @@ struct SettingsView: View {
                          ytSource == "youtube" ? "YouTube" : "YouTube Music") {
                         SearchSourceSettings()
                     }
+                    card("shippingbox.fill", "Downloader",
+                         "Paste a URL, download playlists / albums") { AntraView() }
                     card("folder.fill", "Storage",
                          "Caches, recent searches, history") { StorageSettings() }
                     card("questionmark.circle.fill", "Help & Welcome Guide",

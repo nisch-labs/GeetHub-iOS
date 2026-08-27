@@ -235,6 +235,138 @@ public struct SubsonicClient: Sendable {
         return (try? JSONDecoder().decode(StartResp.self, from: data))?.download_id
     }
 
+    // MARK: - Antra pass-through (any-URL job queue)
+
+    /// Queue any Antra-supported URL (Spotify / YouTube / Deezer / Apple Music
+    /// / Tidal playlist, album, or track) as an Antra job via the proxy.
+    /// Returns the numeric Antra job id.
+    @discardableResult
+    public func startAntraDownload(url: String, format: String = "mp3",
+                                   folder: String? = nil) async throws -> Int {
+        var req = URLRequest(url: credentials.baseURL.appendingPathComponent("api/antra/download"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var body: [String: String] = ["url": url, "format": format]
+        if let folder, !folder.isEmpty { body["folder"] = folder }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        struct Resp: Decodable { let job_id: Int }
+        return (try JSONDecoder().decode(Resp.self, from: data)).job_id
+    }
+
+    /// List all Antra jobs (newest activity first, per Antra's ordering).
+    public func antraJobs() async throws -> [AntraJob] {
+        let url = credentials.baseURL.appendingPathComponent("api/antra/jobs")
+        var req = URLRequest(url: url)
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        return (try? JSONDecoder().decode([AntraJob].self, from: data)) ?? []
+    }
+
+    /// One Antra job with parsed progress (0..99) filled in when in-flight.
+    public func antraJobStatus(id: Int) async throws -> AntraJob {
+        let url = credentials.baseURL.appendingPathComponent("api/antra/jobs/\(id)")
+        var req = URLRequest(url: url)
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        return try JSONDecoder().decode(AntraJob.self, from: data)
+    }
+
+    /// Per-track state for a playlist/album job. Empty for single-track jobs.
+    public func antraJobTracks(id: Int) async throws -> [AntraTrack] {
+        let url = credentials.baseURL.appendingPathComponent("api/antra/jobs/\(id)/tracks")
+        var req = URLRequest(url: url)
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        return (try? JSONDecoder().decode([AntraTrack].self, from: data)) ?? []
+    }
+
+    // ─── Multi-device sync ────────────────────────────────────
+
+    /// Register / update this device in the proxy's registry. Called on
+    /// launch and every ~15s from PlayerEngine. Returns the server-echoed
+    /// device record (with `id` filled if the caller passed nil).
+    @discardableResult
+    public func deviceHeartbeat(payload: DeviceHeartbeat) async throws -> Device {
+        var comps = URLComponents(url: credentials.baseURL.appendingPathComponent("api/devices/heartbeat"),
+                                  resolvingAgainstBaseURL: false)!
+        comps.queryItems = [.init(name: "u", value: credentials.username)]
+        var req = URLRequest(url: comps.url!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(payload)
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        return try JSONDecoder().decode(Device.self, from: data)
+    }
+
+    /// List this account's currently-registered devices (heartbeated within 2 min).
+    public func listDevices() async throws -> [Device] {
+        var comps = URLComponents(url: credentials.baseURL.appendingPathComponent("api/devices"),
+                                  resolvingAgainstBaseURL: false)!
+        comps.queryItems = [.init(name: "u", value: credentials.username)]
+        var req = URLRequest(url: comps.url!)
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        return (try? JSONDecoder().decode([Device].self, from: data)) ?? []
+    }
+
+    /// Drain pending commands (play/pause) for `deviceId` — clients poll
+    /// this every ~3s to react to transfers initiated from other devices.
+    public func pollDeviceCommands(deviceId: String) async throws -> [DeviceCommand] {
+        var comps = URLComponents(url: credentials.baseURL.appendingPathComponent("api/devices/\(deviceId)/commands"),
+                                  resolvingAgainstBaseURL: false)!
+        comps.queryItems = [.init(name: "u", value: credentials.username)]
+        var req = URLRequest(url: comps.url!)
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        return (try? JSONDecoder().decode([DeviceCommand].self, from: data)) ?? []
+    }
+
+    /// Ask the proxy to queue a `play` command on the target device and a
+    /// `pause` command on the source. Source device should pause itself
+    /// immediately (don't wait for the round-trip).
+    public func transferPlayback(
+        toDeviceId targetId: String,
+        sourceDeviceId: String?,
+        song: DeviceSong,
+        position: Double,
+    ) async throws {
+        var comps = URLComponents(url: credentials.baseURL.appendingPathComponent("api/devices/\(targetId)/transfer"),
+                                  resolvingAgainstBaseURL: false)!
+        comps.queryItems = [.init(name: "u", value: credentials.username)]
+        var req = URLRequest(url: comps.url!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        struct Body: Encodable { let source_id: String?; let song: DeviceSong; let position: Double }
+        req.httpBody = try JSONEncoder().encode(Body(source_id: sourceDeviceId, song: song, position: position))
+        let (_, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw SubsonicClientError.badStatus((response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+    }
+
     public func downloadStatus(downloadId: String) async throws -> DownloadStatus {
         var comps = URLComponents(url: credentials.baseURL.appendingPathComponent("api/download/status"),
                                   resolvingAgainstBaseURL: false)!
@@ -250,6 +382,95 @@ public struct SubsonicClient: Sendable {
         }
         return try JSONDecoder().decode(DownloadStatus.self, from: data)
     }
+}
+
+/// One track inside a playlist/album Antra job.
+public struct AntraTrack: Codable, Sendable, Identifiable, Hashable {
+    public let index: Int
+    public let total: Int
+    public let artist: String?
+    public let title: String
+    /// One of: `queued`, `downloading`, `done`, `skipped`, `failed`.
+    public let state: String
+
+    public var id: Int { index }
+}
+
+/// One Antra job — a download of a Spotify/YouTube/etc. URL. Fields mirror
+/// Antra's own /api/jobs shape with an added ``progress`` (0..99) parsed by
+/// the proxy from the job's log tail.
+public struct AntraJob: Codable, Sendable, Identifiable, Hashable {
+    public let id: Int
+    public let url: String
+    public let title: String?
+    public let source: String?
+    public let format: String?
+    public let folder: String?
+    public let status: String            // queued · running · done · error · failed
+    public let created: Double?
+    public let finished: Double?
+    public let exit_code: Int?
+    public let owner: String?
+    public let progress: Int?            // filled in by the proxy for GET /api/antra/jobs/{id}
+
+    public var isTerminal: Bool { status == "done" || status == "error" || status == "failed" }
+}
+
+// MARK: - Multi-device sync types
+
+/// A summary of the currently-playing track, small enough to fit in a
+/// device heartbeat or a transfer command.
+public struct DeviceSong: Codable, Sendable, Equatable {
+    public let id: String
+    public let title: String
+    public let artist: String?
+    public let album: String?
+    public let coverArt: String?
+    public let duration: Int?
+    public init(id: String, title: String, artist: String? = nil, album: String? = nil,
+                coverArt: String? = nil, duration: Int? = nil) {
+        self.id = id; self.title = title; self.artist = artist
+        self.album = album; self.coverArt = coverArt; self.duration = duration
+    }
+}
+
+/// One registered client — iPhone / iPad / Mac / Web.
+public struct Device: Codable, Sendable, Identifiable, Hashable {
+    public let id: String
+    public let name: String
+    public let kind: String       // "iphone" | "ipad" | "mac" | "web" | "other"
+    public let isPlaying: Bool
+    public let currentSong: DeviceSong?
+    public let position: Double
+    public let duration: Double
+    public let last_seen: Double
+
+    public static func == (l: Device, r: Device) -> Bool { l.id == r.id }
+    public func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+/// Payload sent up by every client on init + every ~15s.
+public struct DeviceHeartbeat: Codable, Sendable {
+    public var id: String?          // nil on first call — server assigns
+    public var name: String
+    public var kind: String
+    public var isPlaying: Bool
+    public var currentSong: DeviceSong?
+    public var position: Double
+    public var duration: Double
+    public init(id: String?, name: String, kind: String, isPlaying: Bool,
+                currentSong: DeviceSong?, position: Double, duration: Double) {
+        self.id = id; self.name = name; self.kind = kind
+        self.isPlaying = isPlaying; self.currentSong = currentSong
+        self.position = position; self.duration = duration
+    }
+}
+
+/// A play/pause command queued by another device.
+public struct DeviceCommand: Codable, Sendable {
+    public let type: String       // "play" | "pause"
+    public let song: DeviceSong?
+    public let position: Double?
 }
 
 /// Progress for a save-to-library download started via ``SubsonicClient/startSave(youtubeId:folder:)``.

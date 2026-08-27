@@ -9,6 +9,7 @@ struct MainTabView: View {
     @State private var player: PlayerEngine?
     @State private var picker = PlaylistPicker()
     @State private var playlistFavs = PlaylistFavorites()
+    @State private var downloads: DownloadsCoordinator?
     @State private var showPlayer = false
     @State private var dockPlayer = false
     @State private var selectedTab = 0
@@ -26,9 +27,9 @@ struct MainTabView: View {
 
     var body: some View {
         Group {
-            if let player {
+            if let player, let downloads {
                 HStack(spacing: 0) {
-                    tabShell(player: player)
+                    tabShell(player: player, downloads: downloads)
                         .frame(maxWidth: .infinity)
                     if canDock && dockPlayer {
                         Divider()
@@ -40,6 +41,7 @@ struct MainTabView: View {
                         .environment(player)
                         .environment(picker)
                         .environment(playlistFavs)
+                        .environment(downloads)
                         .frame(width: 440)
                         .transition(.move(edge: .trailing))
                     }
@@ -57,6 +59,9 @@ struct MainTabView: View {
             if player == nil, let client = session.client {
                 player = PlayerEngine(client: client)
             }
+            if downloads == nil, let client = session.client {
+                downloads = DownloadsCoordinator(client: client)
+            }
             #if DEBUG
             if let t = ProcessInfo.processInfo.environment["GEETHUB_TAB"], let i = Int(t) { selectedTab = i }
             #endif
@@ -64,7 +69,7 @@ struct MainTabView: View {
     }
 
     @ViewBuilder
-    private func tabShell(player: PlayerEngine) -> some View {
+    private func tabShell(player: PlayerEngine, downloads: DownloadsCoordinator) -> some View {
         // Native iOS 26: icon-only tabs on iPhone, labelled on iPad/Mac (where
         // iOS 26 renders a sidebar and blank items would look broken).
         // .id(theme.choice) re-tints on accent change.
@@ -120,6 +125,7 @@ struct MainTabView: View {
         .environment(player)
         .environment(picker)
         .environment(playlistFavs)
+        .environment(downloads)
         .tint(theme.accent)
         // Full player as a modal (fullScreenCover on iPhone/iPad,
         // sheet on Mac Catalyst where fullScreenCover crashed on env resolution).
