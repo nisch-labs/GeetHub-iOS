@@ -1,74 +1,151 @@
-# Geet-Hub 🎵
+# Geet-Hub — iOS / iPad / Mac Catalyst
 
-A **lightweight, streaming-first iOS music client** for a self-hosted
-[Navidrome](https://www.navidrome.org/) / Subsonic server, with **CarPlay**.
+A lightweight, streaming-first music client for your own self-hosted
+[Navidrome](https://www.navidrome.org/) / Subsonic server.
 
-_“Geet” = song._ Built as a minimal alternative to heavier sync-based clients
-(like Amperfy) — no local library mirror, so **searching never persists anything**.
-Anything you keep is an explicit action.
+_“Geet” = song._
 
-## Why it exists
+Part of the [Geet-Hub](https://github.com/nisch-labs/GeetHub) self-hosted
+music ecosystem — see the umbrella repo for the full stack (Navidrome +
+[subsonic-proxy](https://github.com/nisch-labs/GeetHub-Subsonic-Proxy) +
+[Antra](https://github.com/nisch-labs/GeetHub-Antra)).
 
-It's the client half of a setup where a server-side proxy (`subsonic-proxy`)
-augments Navidrome: searching also returns **YouTube** results you can play
-instantly, and adding a track to a special **“Download via Antra”** playlist
-pulls a permanent copy into the library. Because all that logic lives in the
-proxy, the client stays thin — it just speaks the Subsonic API. Heavier clients
-that mirror the whole library into a local database re-persist every search
-result they display; Geet-Hub deliberately does not.
+## Features
 
-## Status
+- **Universal**: iPhone, iPad, and Mac Catalyst — one codebase, native on each
+- **Library browse** — Songs / Albums / Artists / Playlists / Genres
+- **Full player** — vinyl-record UI with tonearm progress arc, marquee title,
+  shuffle / repeat / up-next queue / sleep timer, lyrics tab
+- **Favourites & playlists** — server-persisted; create, add, reorder
+- **Live search** — transient by design (never persists results locally,
+  unlike sync-based clients)
+- **YouTube / YouTube Music** results inline via subsonic-proxy — play a
+  virtual track instantly, or save it into your Navidrome library
+- **Downloader** — paste any Spotify / YouTube / Apple Music / Deezer /
+  Tidal / etc. URL and it downloads to your library through Antra, with
+  per-track progress
+- **Multi-device sync** — Spotify-Connect-style: see all your signed-in
+  devices (iPhone / iPad / Mac / web), transfer playback with a tap
+- **Home-screen widget** (iOS 17+) with interactive play / pause / next
+  via `AudioPlaybackIntent`; lock-screen artwork + media-key routing
+- **Right-docked full player** on iPad + Mac Catalyst
+- **Multi-server accounts** — add / switch / edit / remove Navidrome instances
+- **Per-app volume slider** in the Full Player (independent of system volume)
+- **Dark + light mode**
 
-**Early scaffold.** The portable core is built and tested; the app + CarPlay
-targets are created in Xcode (see `PROJECT.md`).
+## Architecture
 
-- ✅ `GeetHubKit` — Swift Package: Subsonic API client, models, salted-MD5 token
-  auth, favorites, smart lists (similar/random), `PlaybackQueue`
-  (shuffle/repeat/up-next), Keychain credential store, and `Session` login flow.
-  Compiles and unit-tested — **13 tests passing** (`swift test`).
-- ✅ `App/` — full SwiftUI app (XcodeGen `project.yml`): Home, Library
-  (Songs/Albums/Artists/Playlists), Favorites, Search (with YouTube + Save),
-  Settings; full-screen vinyl player (spinning record, scrubber, shuffle/repeat,
-  favorite, lyrics, queue, sleep timer); per-song menu (play next / add to queue
-  / favorite / add to playlist); Liquid Glass icon-only tab bar; pull-to-refresh.
-- ⬜ CarPlay scene + templates (needs Apple `carplay-audio` entitlement).
-- ⬜ Offline downloads (v2).
-
-## Layout
+Geet-Hub is the **client half** of a small self-hosted stack:
 
 ```
-Geet-Hub/
-├─ PROJECT.md            full build spec / handoff notes (read this first)
-├─ GeetHubKit/           Swift Package — portable, no UIKit, no persistence
-│  ├─ Package.swift
-│  ├─ Sources/GeetHubKit/
-│  │  ├─ SubsonicCredentials.swift   auth (u/t/s salted MD5)
-│  │  ├─ SubsonicModels.swift        Codable entities
-│  │  └─ SubsonicClient.swift        async API (search is transient by design)
-│  └─ Tests/GeetHubKitTests/
-├─ App/                  SwiftUI app-target files (add these in Xcode)
-│  ├─ GeetHubApp.swift   @main entry — creates Session
-│  ├─ RootView.swift     login vs library switch
-│  └─ LoginView.swift    server URL + username + password form
-└─ (Xcode project + CarPlay target — created on the build machine)
+┌─────────────────┐            ┌─────────────────┐
+│   Geet-Hub      │            │   Web player    │
+│   (this repo)   │            │  (Svelte SPA)   │
+└────────┬────────┘            └────────┬────────┘
+         │                              │
+         └───────────┬──────────────────┘
+                     ▼
+            ┌────────────────┐
+            │ subsonic-proxy │  ← FastAPI, thin layer over Navidrome
+            └───┬────────┬───┘
+                │        │
+                ▼        ▼
+        ┌───────────┐  ┌───────────┐
+        │ Navidrome │  │  Antra    │  ← downloads land in /music
+        │ (streams  │  │  (fetches │     Navidrome scans and serves
+        │  files)   │  │  audio)   │
+        └───────────┘  └───────────┘
 ```
 
-## Build the core
+The proxy handles YouTube search injection, save-to-library, Antra
+pass-through, and multi-device coordination. The app just speaks Subsonic
+(plus a handful of custom endpoints exposed by the proxy). No local library
+mirror — search results are transient and never persisted.
+
+## Requirements
+
+- **macOS 15+** with **Xcode 16+** to build
+- **iOS 17+** (device or simulator) — required for the widget's
+  interactive `AudioPlaybackIntent`
+- A running **[subsonic-proxy](https://github.com/nisch-labs/GeetHub-Subsonic-Proxy)**
+  pointing at your Navidrome instance
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `.xcodeproj` is
+  generated from `project.yml`
+
+## Build & run
 
 ```sh
-cd GeetHubKit
-swift build
-swift test
+# One-time
+brew install xcodegen
+
+# Get the code + generate the project
+git clone https://github.com/nisch-labs/GeetHub-iOS.git
+cd GeetHub-iOS
+xcodegen generate
+open GeetHub.xcodeproj
 ```
 
-## The app / CarPlay target
+### Personalise before you build
 
-Created in Xcode (iOS 17+), depending on `GeetHubKit`. Needs Apple's
-`carplay-audio` entitlement (paid account + approval). CarPlay templates and
-Subsonic request/response shapes can be referenced from
-[Amperfy](https://github.com/BLeeEZ/Amperfy) (GPL-3.0). See `PROJECT.md`.
+`project.yml` contains identifiers that need to be yours, not mine, before
+Xcode will sign the build to your device:
+
+| Field | Change to |
+|---|---|
+| `DEVELOPMENT_TEAM: J27CK6TLVS` (both targets) | Your own Apple Team ID (Apple Developer Portal → Membership) |
+| `PRODUCT_BUNDLE_IDENTIFIER: com.nixsocket.geethub` | Something under your reversed-domain, e.g. `com.yourdomain.geethub` |
+| `PRODUCT_BUNDLE_IDENTIFIER: com.nixsocket.geethub.widget` | Matching widget bundle, e.g. `com.yourdomain.geethub.widget` |
+| App Group `group.com.nixsocket.geethub` (in `App/GeetHub.entitlements` and `Widget/GeetHubWidget.entitlements`) | `group.com.yourdomain.geethub` — must match on both files, and be added to your Apple Developer account under Certificates → Identifiers → App Groups |
+
+Then re-run `xcodegen generate` to regenerate `.xcodeproj` and open it in
+Xcode. Automatic signing should pick up your team.
+
+### First run
+
+Launch the app → **Add Server** → enter your subsonic-proxy URL, username,
+password. That's it — no local config files.
+
+## Repository layout
+
+```
+GeetHub-iOS/
+├── App/                  SwiftUI app target (iPhone / iPad / Mac Catalyst)
+│   ├── GeetHubApp.swift  @main
+│   ├── MainTabView.swift Tab shell + right-dock layout
+│   ├── NowPlaying.swift  Mini bar + full vinyl player
+│   ├── PlayerEngine.swift AVPlayer wrapper, multi-device, volume, widget bridge
+│   ├── DevicesSheet.swift Multi-device transfer sheet
+│   ├── AntraView.swift   Downloader UI
+│   └── ...
+├── Widget/               Home-screen widget extension (WidgetKit + AppIntents)
+├── GeetHubKit/           Portable Swift Package
+│   └── Sources/GeetHubKit/
+│       ├── SubsonicClient.swift  Async Subsonic API client
+│       ├── SubsonicModels.swift  Codable entities (incl. custom types)
+│       ├── SubsonicCredentials.swift  salted-MD5 auth
+│       ├── PlaybackQueue.swift   shuffle / repeat / up-next
+│       ├── Session.swift         login flow
+│       └── ...
+├── project.yml           XcodeGen source of truth
+└── PROJECT.md            Original design notes (historical context)
+```
+
+## Contributing
+
+Issues and PRs welcome. If you're planning something bigger than a bug fix,
+please open an issue first so we can talk through the approach.
 
 ## License
 
-**GPL-3.0** — required because the app target reuses code from Amperfy (GPL-3.0).
-Add the full license text (`LICENSE`) when publishing the GitHub repo.
+MIT — see [LICENSE](LICENSE).
+
+## Related repos
+
+- **[GeetHub](https://github.com/nisch-labs/GeetHub)** — umbrella: architecture,
+  screenshots, `docker-compose.yml` for the full stack
+- **[GeetHub-Subsonic-Proxy](https://github.com/nisch-labs/GeetHub-Subsonic-Proxy)** —
+  FastAPI backend + Svelte web player
+- **[GeetHub-Antra](https://github.com/nisch-labs/GeetHub-Antra)** — Antra
+  fork for URL-based downloads (Elastic License 2.0)
+- **[Navidrome](https://www.navidrome.org/)** — the underlying music server
+  (third-party, MIT)
