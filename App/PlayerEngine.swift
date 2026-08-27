@@ -3,6 +3,7 @@ import Foundation
 import AVFoundation
 import MediaPlayer
 import UIKit
+import WidgetKit
 import GeetHubKit
 
 @MainActor
@@ -160,9 +161,53 @@ final class PlayerEngine {
     private let player = AVPlayer()
     private var timeObserver: Any?
 
+    // Per-app volume (0.0–1.0). Applies to this AVPlayer only, not the system
+    // volume — so hardware buttons keep working normally and this lets you dial
+    // the app quieter without touching every other app.
+    private static let volumeKey = "geethub.volume"
+    private(set) var volume: Float = {
+        let stored = UserDefaults.standard.object(forKey: PlayerEngine.volumeKey) as? Float
+        return stored.map { max(0, min(1, $0)) } ?? 1.0
+    }()
+    func setVolume(_ v: Float) {
+        let clamped = max(0, min(1, v))
+        volume = clamped
+        player.volume = clamped
+        UserDefaults.standard.set(clamped, forKey: PlayerEngine.volumeKey)
+    }
+
+    // MARK: - Multi-device sync (Devices menu)
+    //
+    // Every client heartbeats to the proxy so all of the user's devices see
+    // each other. Transferring playback drops a command into the target's
+    // queue; both devices react on their poll cycle.
+    private static let deviceIdKey = "geethub.deviceId"
+    private(set) var deviceId: String = {
+        if let v = UserDefaults.standard.string(forKey: PlayerEngine.deviceIdKey) { return v }
+        let fresh = UUID().uuidString
+        UserDefaults.standard.set(fresh, forKey: PlayerEngine.deviceIdKey)
+        return fresh
+    }()
+    private(set) var devices: [Device] = []
+    private var heartbeatTimer: Timer?
+    private var deviceCmdTimer: Timer?
+
+    private var deviceKind: String {
+        #if targetEnvironment(macCatalyst)
+        return "mac"
+        #else
+        return UIDevice.current.userInterfaceIdiom == .pad ? "ipad" : "iphone"
+        #endif
+    }
+    private var deviceName: String {
+        // e.g. "Nischal's iPhone" — provided by the OS.
+        UIDevice.current.name
+    }
+
     init(client: SubsonicClient) {
         self.client = client
         configureAudioSession()
+        player.volume = volume
         addPeriodicTime()
         observeItemEnd()
         setupRemoteCommands()
@@ -173,6 +218,154 @@ final class PlayerEngine {
         // played. Deprecated on iOS 13+ (superseded by MPRemoteCommandCenter
         // targets, which we also set up) but still required for key routing.
         UIApplication.shared.beginReceivingRemoteControlEvents()
+        startCommandDrain()
+        Task { await refreshFavouritesSnapshot() }
+        startDeviceSync()
+    }
+
+    // MARK: - Device sync loops
+
+    private func startDeviceSync() {
+        // Kick off an immediate heartbeat + device list refresh.
+        Task { await self.pushHeartbeat() }
+        Task { await self.refreshDevices() }
+
+        heartbeatTimer?.invalidate()
+        heartbeatTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                await self?.pushHeartbeat()
+                await self?.refreshDevices()
+            }
+        }
+        deviceCmdTimer?.invalidate()
+        deviceCmdTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in await self?.drainDeviceCommands() }
+        }
+    }
+
+    /// Snapshot of the currently-playing song for heartbeat/transfer payloads.
+    private func makeDeviceSong() -> DeviceSong? {
+        guard let s = current else { return nil }
+        return DeviceSong(id: s.id, title: s.title, artist: s.artist,
+                          album: s.album, coverArt: s.coverArt, duration: s.duration)
+    }
+
+    func pushHeartbeat() async {
+        let payload = DeviceHeartbeat(
+            id: deviceId,
+            name: deviceName,
+            kind: deviceKind,
+            isPlaying: isPlaying,
+            currentSong: makeDeviceSong(),
+            position: currentTime,
+            duration: duration,
+        )
+        _ = try? await client.deviceHeartbeat(payload: payload)
+    }
+
+    func refreshDevices() async {
+        let list = (try? await client.listDevices()) ?? []
+        devices = list
+    }
+
+    private func drainDeviceCommands() async {
+        let commands = (try? await client.pollDeviceCommands(deviceId: deviceId)) ?? []
+        for cmd in commands {
+            switch cmd.type {
+            case "pause":
+                if isPlaying { togglePlayPause() }
+            case "play":
+                if let song = cmd.song {
+                    // Reconstruct a Song from the DeviceSong payload — enough
+                    // to start playback; extra metadata will be right on next
+                    // library refresh.
+                    let s = Song(
+                        id: song.id, title: song.title,
+                        album: song.album, albumId: nil,
+                        artist: song.artist, artistId: nil,
+                        coverArt: song.coverArt, duration: song.duration,
+                        track: nil, year: nil, size: nil, suffix: nil,
+                        contentType: nil, isVideo: nil,
+                        created: nil, playCount: nil, starred: nil,
+                    )
+                    play([s], startAt: 0)
+                    if let pos = cmd.position, pos > 0 {
+                        // Give the item a moment to load before seeking.
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(400))
+                            self.seek(to: pos)
+                        }
+                    }
+                }
+            default:
+                break
+            }
+        }
+    }
+
+    /// User picked a device from the sheet — send `play(song, pos)` there
+    /// and pause locally.
+    func transferPlayback(to targetId: String) async {
+        guard let song = makeDeviceSong() else { return }
+        let pos = currentTime
+        // Pause locally immediately so the same track isn't playing on both.
+        if isPlaying { togglePlayPause() }
+        _ = try? await client.transferPlayback(
+            toDeviceId: targetId, sourceDeviceId: deviceId,
+            song: song, position: pos,
+        )
+        // Refresh the list so the target's isPlaying flips soon.
+        Task { try? await Task.sleep(for: .seconds(2)); await refreshDevices() }
+    }
+
+    // MARK: - Widget bridge (playback intents + favourites)
+
+    /// Poll the shared command queue every 1s. When the widget's App Intent
+    /// runs, it pushes a command to shared UserDefaults; we drain it here.
+    /// iOS 17+ AudioPlaybackIntent will background-launch the app if needed,
+    /// so this timer starts firing shortly after and the command is picked up.
+    private var commandDrainTimer: Timer?
+    private func startCommandDrain() {
+        commandDrainTimer?.invalidate()
+        commandDrainTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in
+                guard let cmd = PlayerCommandStore.pop() else { return }
+                switch cmd {
+                case .togglePlayPause: self.togglePlayPause()
+                case .next:            self.next()
+                case .previous:        self.previous()
+                }
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        }
+        // Also drain immediately in case a command was queued while the app
+        // was suspended.
+        Task { @MainActor in
+            if let cmd = PlayerCommandStore.pop() {
+                switch cmd {
+                case .togglePlayPause: togglePlayPause()
+                case .next:            next()
+                case .previous:        previous()
+                }
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        }
+    }
+
+    /// Publish up to 8 starred songs to the App Group so the widget can show
+    /// them in its "no playback" state. Called on startup and can be called
+    /// again after the user stars/unstars a track.
+    func refreshFavouritesSnapshot() async {
+        guard let starred = try? await client.favorites().song else { return }
+        let entries: [FavouriteEntry] = starred.prefix(8).map { s in
+            FavouriteEntry(
+                songId: s.id, title: s.title, artist: s.artist,
+                coverArtURL: s.coverArt.map { client.coverArtURL(id: $0, size: 300).absoluteString },
+            )
+        }
+        FavouritesStore.write(FavouritesSnapshot(songs: entries))
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - Controls
@@ -276,11 +469,18 @@ final class PlayerEngine {
         c.previousTrackCommand.addTarget { [weak self] _ in self?.previous(); return .success }
     }
 
+    // Cache one artwork per song id — lock-screen/control-centre pull the same
+    // asset many times per second while the scrubber ticks, and we'd otherwise
+    // re-fetch on every updateNowPlaying() call.
+    private var artworkCache: [String: MPMediaItemArtwork] = [:]
+
     private func updateNowPlaying() {
         let center = MPNowPlayingInfoCenter.default()
         guard let song = current else {
             center.nowPlayingInfo = nil
             center.playbackState = .stopped
+            NowPlayingStore.write(nil)
+            WidgetCenter.shared.reloadAllTimelines()
             return
         }
         var info: [String: Any] = [
@@ -291,9 +491,46 @@ final class PlayerEngine {
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
         ]
         if let album = song.album { info[MPMediaItemPropertyAlbumTitle] = album }
+        if let art = artworkCache[song.id] {
+            info[MPMediaItemPropertyArtwork] = art
+        }
         center.nowPlayingInfo = info
-        // Explicit playbackState is what macOS uses to decide who owns the
-        // media keys (F7/F8/F9) and appears in Control Center's Now Playing.
         center.playbackState = isPlaying ? .playing : .paused
+
+        // Mirror the same state into the App Group so the widget can read it.
+        NowPlayingStore.write(NowPlayingSnapshot(
+            songId: song.id,
+            title: song.title,
+            artist: song.artist,
+            album: song.album,
+            coverArtURL: song.coverArt.map { client.coverArtURL(id: $0, size: 300).absoluteString },
+            isPlaying: isPlaying,
+        ))
+        WidgetCenter.shared.reloadAllTimelines()
+
+        // Fetch artwork out-of-band the first time we see this song. Once cached,
+        // subsequent updateNowPlaying calls include it immediately (line above).
+        if artworkCache[song.id] == nil, let artId = song.coverArt {
+            let songId = song.id
+            let url = client.coverArtURL(id: artId, size: 600)
+            Task { [weak self] in
+                guard let (data, _) = try? await URLSession.shared.data(from: url),
+                      let image = UIImage(data: data) else { return }
+                // MediaPlayer calls the request handler on its own dispatch queue,
+                // so the closure MUST NOT inherit @MainActor isolation — Swift 6
+                // strict concurrency will trap otherwise. Build it in a nonisolated
+                // helper so the closure captures no actor context.
+                let art = Self.makeArtwork(from: image)
+                await MainActor.run {
+                    guard let self else { return }
+                    self.artworkCache[songId] = art
+                    if self.current?.id == songId { self.updateNowPlaying() }
+                }
+            }
+        }
+    }
+
+    private nonisolated static func makeArtwork(from image: UIImage) -> MPMediaItemArtwork {
+        MPMediaItemArtwork(boundsSize: image.size) { _ in image }
     }
 }

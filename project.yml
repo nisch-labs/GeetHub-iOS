@@ -9,6 +9,26 @@ packages:
   GeetHubKit:
     path: GeetHubKit
 
+# Only expose the app scheme. The widget target still builds (implicit
+# dependency of GeetHub), but no scheme is shared for it — that prevents the
+# "Failed to show Widget" error you get when you accidentally pick the widget
+# scheme in Xcode's toolbar picker.
+schemes:
+  GeetHub:
+    build:
+      targets:
+        GeetHub: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
 targets:
   GeetHub:
     type: application
@@ -17,6 +37,7 @@ targets:
       - App
     dependencies:
       - package: GeetHubKit
+      - target: GeetHubWidget
     info:
       path: App/Info.plist
       properties:
@@ -45,6 +66,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "6.0"
+        CODE_SIGN_ENTITLEMENTS: App/GeetHub.entitlements
         # Personal team (NISCHAL NIROULA) — automatic signing for device installs.
         # The simulator ignores this and builds unsigned regardless.
         DEVELOPMENT_TEAM: J27CK6TLVS
@@ -58,3 +80,32 @@ targets:
         # Disable the alternative "Designed for iPad" mode — we're a real
         # Catalyst app, not the scaled iPad-simulator shim.
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+
+  # Home-screen widget extension. Reads the current NowPlayingSnapshot from
+  # the shared App Group and renders it (Small + Medium).
+  GeetHubWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget
+    dependencies:
+      - package: GeetHubKit
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Geet-Hub Widget
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        # Match the app's ATS so http:// self-hosted servers work here too.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nixsocket.geethub.widget
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        CODE_SIGN_ENTITLEMENTS: Widget/GeetHubWidget.entitlements
+        DEVELOPMENT_TEAM: J27CK6TLVS
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: YES

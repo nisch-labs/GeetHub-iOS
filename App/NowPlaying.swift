@@ -88,6 +88,7 @@ struct FullPlayerView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showLyrics = false
     @State private var showQueue = false
+    @State private var showDevices = false
     /// When non-nil, the header's leading button becomes an undock (xmark)
     /// action instead of the modal-dismiss chevron. Used by the docked pane
     /// on iPad + Mac Catalyst.
@@ -107,11 +108,13 @@ struct FullPlayerView: View {
             trackInfo
             scrubber
             secondaryControls
+            volumeRow
             transport
         }
         .paperBackground()
         .sheet(isPresented: $showLyrics) { LyricsView().environment(player) }
         .sheet(isPresented: $showQueue) { QueueView().environment(player) }
+        .sheet(isPresented: $showDevices) { DevicesSheet().environment(player) }
     }
 
     // Header: back · (spacer) · favorite/download · menu
@@ -123,6 +126,11 @@ struct FullPlayerView: View {
                 Image(systemName: onClose != nil ? "xmark" : "chevron.down").font(.headline)
             }
             Spacer()
+            Button { showDevices = true } label: {
+                Image(systemName: player.devices.count > 1
+                      ? "hifispeaker.and.appletv" : "hifispeaker")
+                    .font(.headline).foregroundStyle(Theme.ink)
+            }
             if player.current?.isVirtual == true {
                 if let pct = player.currentDownloadPercent {
                     ProgressRing(percent: pct).frame(width: 20, height: 20)
@@ -271,6 +279,36 @@ struct FullPlayerView: View {
 
     private var repeatSymbol: String {
         player.repeatMode == .one ? "repeat.1" : "repeat"
+    }
+
+    // App-only volume slider — hardware buttons still control the system level.
+    private var volumeRow: some View {
+        let bind = Binding<Double>(
+            get: { Double(player.volume) },
+            set: { player.setVolume(Float($0)) },
+        )
+        return HStack(spacing: 12) {
+            Button { player.setVolume(0) } label: {
+                Image(systemName: player.volume == 0 ? "speaker.slash.fill" : "speaker.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.graphite)
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Slider(value: bind, in: 0...1)
+                .tint(Theme.accent)
+            Button { player.setVolume(1) } label: {
+                Image(systemName: "speaker.wave.3.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.graphite)
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 28)
+        .padding(.bottom, 14)
     }
 
     // Hairline-divided transport — whole cell is the button (cassette feel)

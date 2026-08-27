@@ -22,7 +22,7 @@ struct AlbumDetailView: View {
                     Text(album.artist ?? "").retro(12, .light, color: Theme.graphite, tracking: 2)
                 }
 
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     Button { player.play(songs, startAt: 0) } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "play.fill")
@@ -32,14 +32,19 @@ struct AlbumDetailView: View {
                         .frame(maxWidth: .infinity).padding(.vertical, 14)
                         .background(Theme.accent)
                     }
+                    .disabled(songs.isEmpty)
+
                     Button { player.playShuffled(songs) } label: {
-                        Image(systemName: "shuffle").foregroundStyle(Theme.accent)
-                            .frame(width: 52, height: 50)
-                            .overlay(Rectangle().strokeBorder(Theme.accent, lineWidth: 1.5))
+                        HStack(spacing: 8) {
+                            Image(systemName: "shuffle")
+                            Text("Shuffle").retro(14, .semibold, color: Theme.accent, tracking: 2)
+                        }
+                        .foregroundStyle(Theme.accent).frame(maxWidth: .infinity).padding(.vertical, 14)
+                        .overlay(Rectangle().strokeBorder(Theme.accent, lineWidth: 1.5))
                     }
+                    .disabled(songs.isEmpty)
                 }
                 .buttonStyle(.plain)
-                .disabled(songs.isEmpty)
                 .padding(.horizontal, 40)
 
                 LazyVStack(spacing: 0) {

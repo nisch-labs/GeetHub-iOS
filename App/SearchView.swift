@@ -6,6 +6,7 @@ import GeetHubKit
 struct SearchView: View {
     @Environment(Session.self) private var session
     @Environment(PlayerEngine.self) private var player
+    @Environment(DownloadsCoordinator.self) private var downloads
 
     @State private var query = ""
     @State private var songs: [Song] = []
@@ -14,6 +15,7 @@ struct SearchView: View {
     @State private var toast: String?
     @State private var recents: [String] = []
     @State private var folders: [String] = []
+    @State private var showAntra = false
     @AppStorage("ytSearchSource") private var ytSource: String = "ytmusic"
 
     private let recentsKey = "recentSearches"
@@ -22,6 +24,7 @@ struct SearchView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 header
+                downloadsBanner
                 searchField
                 sourcePicker
                 content
@@ -29,6 +32,9 @@ struct SearchView: View {
             .paperBackground()
             .navigationBarHidden(true)
             .overlay(alignment: .bottom) { toastView }
+            .sheet(isPresented: $showAntra) {
+                AntraView().environment(session)
+            }
         }
         .tint(Theme.accent)
         .onChange(of: query) { _, q in scheduleSearch(q) }
@@ -61,10 +67,55 @@ struct SearchView: View {
 
     // MARK: - Header + field
 
+    // Compact strip above the search field — visible when any Antra job is
+    // in-flight. Tapping opens the full Antra dashboard.
+    @ViewBuilder private var downloadsBanner: some View {
+        if let job = downloads.activeJobs.first {
+            Button { showAntra = true } label: {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small).tint(Theme.accent)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(job.title ?? "Downloading…")
+                            .retro(11, .semibold, tracking: 1)
+                            .lineLimit(1)
+                        HStack(spacing: 6) {
+                            if let pct = job.progress {
+                                Text("\(pct)%").font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(Theme.accent)
+                            }
+                            if downloads.activeJobs.count > 1 {
+                                Text("· +\(downloads.activeJobs.count - 1) more")
+                                    .retro(8, .light, color: Theme.graphite, tracking: 1)
+                            }
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(Theme.graphite)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .background(Theme.accent.opacity(0.10),
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Theme.accent.opacity(0.25), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20).padding(.bottom, 10)
+        }
+    }
+
     private var header: some View {
-        HStack {
+        HStack(spacing: 8) {
             Text("Search").retro(20, .bold, tracking: 1)
             Spacer()
+            Button { showAntra = true } label: {
+                Image(systemName: "shippingbox")
+                    .font(.title3).foregroundStyle(Theme.ink)
+                    .frame(width: 36, height: 36)
+                    .background(Theme.surface, in: Circle())
+                    .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Downloader")
         }
         .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 14)
     }
